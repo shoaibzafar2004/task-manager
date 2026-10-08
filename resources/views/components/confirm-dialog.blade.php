@@ -1,6 +1,6 @@
 {{-- Themed replacement for window.confirm(): any <form data-confirm="…"> asks here before submitting --}}
 <div x-data="confirmDialog" x-show="open" x-cloak x-transition:leave="transition duration-150"
-     @keydown.escape.window="open && cancel()"
+     @keydown.escape.window="if (open) { $event.preventDefault(); cancel(); }"
      class="fixed inset-0 z-50 grid place-items-center p-4">
     <div x-show="open" x-transition.opacity.duration.200ms @click="cancel()"
          class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm dark:bg-black/60"></div>

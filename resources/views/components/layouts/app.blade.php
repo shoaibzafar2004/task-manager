@@ -58,6 +58,7 @@
         </main>
 
         <x-confirm-dialog />
+        <x-task-modal />
 
         {{-- Toasts --}}
         <div x-data="toasts(@js(session('status')))"

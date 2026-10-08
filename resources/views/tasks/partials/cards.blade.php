@@ -12,7 +12,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 <span class="prio-badge" data-priority="{{ $task->priority }}">#{{ $task->priority }}</span>
                 <h2 class="task-title font-medium wrap-break-word text-slate-900 dark:text-slate-100">
-                    <a href="{{ route('tasks.show', $task) }}" class="transition hover:text-indigo-600 dark:hover:text-indigo-400">{{ $task->title }}</a>
+                    <a href="{{ route('tasks.show', $task) }}" data-task-link class="transition hover:text-indigo-600 dark:hover:text-indigo-400">{{ $task->title }}</a>
                 </h2>
             </div>
             @if ($task->info)

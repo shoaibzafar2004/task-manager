@@ -89,4 +89,56 @@ class TaskShowTest extends TestCase
         $this->get(route('tasks.index'))->assertSee(route('tasks.show', $open));
         $this->get(route('history'))->assertSee(route('tasks.show', $done));
     }
+
+    public function test_popup_gets_just_the_task_card_as_json(): void
+    {
+        $task = Task::factory()->create(['title' => 'Plan sprint']);
+
+        $response = $this->getJson(route('tasks.show', $task))
+            ->assertOk()
+            ->assertJsonPath('title', 'Plan sprint');
+
+        $html = $response->json('html');
+        $this->assertStringContainsString('Plan sprint', $html);
+        $this->assertStringContainsString('data-modal-close', $html);
+        $this->assertStringContainsString('data-modal-action="complete"', $html);
+        $this->assertStringNotContainsString('<html', $html);
+    }
+
+    public function test_popup_can_delete_and_restore_with_json(): void
+    {
+        $task = Task::factory()->create();
+
+        $this->deleteJson(route('tasks.destroy', $task))->assertOk()->assertJson(['deleted' => true]);
+        $this->assertSoftDeleted($task);
+
+        $this->patchJson(route('tasks.restore', $task->id))->assertOk()->assertJson(['restored' => true]);
+        $this->assertNotSoftDeleted($task);
+    }
+
+    public function test_back_link_returns_to_the_list_it_came_from_even_after_completing(): void
+    {
+        $project = Project::factory()->create();
+        $task = Task::factory()->for($project)->create();
+        $this->get(route('tasks.index', ['project' => $project->id]));
+        // The list's full URL as the browser saw it, query string included.
+        $listUrl = url('/').'/?project='.$project->id;
+
+        $this->get(route('tasks.show', $task))->assertSee('href="'.e($listUrl).'"', false);
+
+        $this->from(route('tasks.show', $task))->patch(route('tasks.toggle', $task));
+
+        $this->from(route('tasks.show', $task))
+            ->get(route('tasks.show', $task))
+            ->assertSee('href="'.e($listUrl).'"', false)
+            ->assertSeeInOrder(['href="'.e($listUrl).'"', 'Tasks'], false);
+    }
+
+    public function test_back_link_for_a_direct_visit_follows_the_task_state(): void
+    {
+        $task = Task::factory()->completed()->create();
+
+        $this->get(route('tasks.show', $task))
+            ->assertSeeInOrder(['href="'.route('history').'"', 'History'], false);
+    }
 }

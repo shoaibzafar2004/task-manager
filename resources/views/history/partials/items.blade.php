@@ -1,5 +1,5 @@
 @foreach ($tasks as $task)
-    <li class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <li data-id="{{ $task->id }}" class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         @if ($tab === 'completed')
             <span class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
                 <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
@@ -12,7 +12,7 @@
 
         <div class="min-w-0 flex-1">
             <h2 @class(['font-medium wrap-break-word text-slate-500 dark:text-slate-400', 'line-through decoration-slate-300 dark:decoration-slate-600' => $tab === 'completed'])>
-                <a href="{{ route('tasks.show', $task->id) }}" class="transition hover:text-indigo-600 dark:hover:text-indigo-400">{{ $task->title }}</a>
+                <a href="{{ route('tasks.show', $task->id) }}" data-task-link class="transition hover:text-indigo-600 dark:hover:text-indigo-400">{{ $task->title }}</a>
             </h2>
             @if ($task->info)
                 <p class="mt-1 line-clamp-2 text-sm text-slate-400 dark:text-slate-500">{{ $task->infoExcerpt() }}</p>

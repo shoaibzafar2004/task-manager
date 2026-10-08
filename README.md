@@ -10,7 +10,7 @@ A small task manager built with Laravel 13 (PHP 8.3+), MySQL 8.4, Blade, Alpine.
 - Drag and drop to reorder tasks. Priorities (1 = highest) are saved automatically.
 - Tasks are always sorted by priority. Long lists load 100 at a time as you scroll (History loads 20 at a time).
 - Tick a task to complete it. It animates out of the list.
-- Click a task's title to open its own page with every detail, including for completed and deleted tasks.
+- Click a task's title to open it in a popup with every detail and actions (complete, edit, delete, restore). The URL changes, so Back closes it and the link opens as a full page.
 - Write details in Markdown (headings, lists, links, code), with a formatting toolbar and live preview.
 - Checklists (`- [ ] step`) can be ticked right on the task page. Cards show progress such as `2/5`.
 - **History** page with tabs for Completed tasks (reopen or delete) and Deleted tasks (restore).

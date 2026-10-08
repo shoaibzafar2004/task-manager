@@ -7,7 +7,13 @@ const csrf = document.querySelector('meta[name="csrf-token"]').content;
 async function request(method, url, body) {
     const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf },
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': csrf,
+            // Marks the request as AJAX so Laravel doesn't record it as the page to go "back" to.
+            'X-Requested-With': 'XMLHttpRequest',
+        },
         body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -52,6 +58,31 @@ function serially(job) {
     return pending;
 }
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Mirror the server closing the priority gap a completed or deleted task leaves, so badges
+ * and the next batch's `after` cursor stay right. Call it once the server has confirmed.
+ */
+function closePriorityGap(card) {
+    card.dataset.removed = '';
+    const removed = Number(card.dataset.priority);
+    card.parentElement.querySelectorAll('.task-card').forEach((other) => {
+        const priority = Number(other.dataset.priority);
+        if (other !== card && priority > removed) setPriority(other, priority - 1);
+    });
+}
+
+/** Strike through, slide out and drop a completed card from the list. */
+async function removeCompletedCard(card) {
+    card.querySelector('.task-check').checked = true;
+    card.classList.add('is-done');
+    // Let the strike-through register before the card slides away.
+    await wait(350);
+    await animateOut(card);
+    decrementTaskCount();
+}
+
 function decrementTaskCount() {
     let total = 0;
     document.querySelectorAll('[data-task-count]').forEach((el) => (total = el.textContent = Number(el.textContent) - 1));
@@ -70,7 +101,7 @@ function initLoadMore() {
             const url = new URL(marker.dataset.nextUrl, window.location.href);
             // Active tasks are keyed on the last loaded priority, read at request time.
             if (list.id === 'task-list') {
-                const last = [...list.querySelectorAll('.task-card:not([data-completed])')].at(-1);
+                const last = [...list.querySelectorAll('.task-card:not([data-removed])')].at(-1);
                 url.searchParams.set('after', last ? last.dataset.priority : 0);
             }
             return url;
@@ -144,13 +175,7 @@ function initTaskList() {
                 return false;
             }
 
-            // Mirror the server closing the gap right away, so the next batch starts at the right place.
-            card.dataset.completed = '';
-            const removed = Number(card.dataset.priority);
-            list.querySelectorAll('.task-card').forEach((other) => {
-                const p = Number(other.dataset.priority);
-                if (other !== card && p > removed) setPriority(other, p - 1);
-            });
+            closePriorityGap(card);
             return true;
         });
 
@@ -161,21 +186,18 @@ function initTaskList() {
             return;
         }
 
-        // Let the strike-through register before the card slides away.
-        await new Promise((r) => setTimeout(r, 350));
-        await animateOut(card);
-        decrementTaskCount();
+        await removeCompletedCard(card);
         toast('Task completed 🎉');
     });
 }
 
-/** Lets checklist boxes in a task's rendered details be ticked in place. */
-function initChecklist() {
-    const details = document.querySelector('[data-checklist-url]');
+/** Lets checklist boxes in a task's rendered details (on the page or in the popup) be ticked in place. */
+function initChecklist(root = document, onProgress = () => {}) {
+    const details = root.querySelector('[data-checklist-url]');
     if (!details) return;
 
-    const bar = document.querySelector('[data-checklist-bar]');
-    const count = document.querySelector('[data-checklist-count]');
+    const bar = root.querySelector('[data-checklist-bar]');
+    const count = root.querySelector('[data-checklist-count]');
 
     details.querySelectorAll('input[type="checkbox"]').forEach((box, index) => {
         box.disabled = false;
@@ -196,6 +218,7 @@ function initChecklist() {
                     details.dataset.checklistVersion = version;
                     if (bar) bar.style.width = `${Math.round((done / total) * 100)}%`;
                     if (count) count.textContent = `${done} of ${total} done`;
+                    onProgress(done, total);
                 } catch (error) {
                     box.checked = !checked;
                     if (error.status === 409) {
@@ -209,6 +232,18 @@ function initChecklist() {
                 }
             });
         });
+    });
+}
+
+const BADGE_COMPLETE = ['bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-500/15', 'dark:text-emerald-300'];
+const BADGE_PARTIAL = ['bg-slate-100', 'text-slate-600', 'dark:bg-slate-800', 'dark:text-slate-400'];
+
+function updateChecklistBadge(taskId, done, total) {
+    document.querySelectorAll(`[data-id="${taskId}"] [data-checklist-badge]`).forEach((badge) => {
+        badge.querySelector('[data-checklist-badge-count]').textContent = `${done}/${total}`;
+        badge.title = `${done} of ${total} checklist items done`;
+        badge.classList.remove(...BADGE_COMPLETE, ...BADGE_PARTIAL);
+        badge.classList.add(...(done === total ? BADGE_COMPLETE : BADGE_PARTIAL));
     });
 }
 
@@ -331,6 +366,163 @@ Alpine.data('markdownEditor', (previewUrl) => ({
     },
 }));
 
+const MODAL_ACTIONS = {
+    complete: { method: 'PATCH', message: 'Task completed 🎉' },
+    reopen: { method: 'PATCH', message: 'Task reopened and moved back to the list.' },
+    delete: { method: 'DELETE', message: 'Task deleted.' },
+    restore: { method: 'PATCH', message: 'Task restored.' },
+};
+
+/**
+ * Opens tasks in a popup over the list or History. The address bar shows the task's URL,
+ * so Back closes the popup and the link can be shared; loading that URL directly shows
+ * the full task page instead.
+ */
+Alpine.data('taskModal', () => ({
+    open: false,
+    loading: false,
+    fetching: false,
+    pushed: false,
+    trigger: null,
+    pageTitle: document.title,
+
+    init() {
+        document.addEventListener('click', (event) => {
+            const link = event.target.closest('a[data-task-link]');
+            // Let modified clicks (new tab, new window) behave like normal links.
+            if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+            event.preventDefault();
+            this.show(link.href, link);
+        });
+
+        window.addEventListener('popstate', (event) => {
+            if (event.state?.taskModal) {
+                this.show(window.location.href, null, false);
+            } else if (this.open) {
+                this.hide();
+            }
+        });
+
+        const content = this.$refs.content;
+        content.addEventListener('click', (event) => event.target.closest('[data-modal-close]') && this.close());
+        content.addEventListener('submit', (event) => {
+            const form = event.target.closest('form[data-modal-action]');
+            if (!form || form.dataset.confirm) return; // confirmed forms arrive via the event below
+            event.preventDefault();
+            this.act(form);
+        });
+        content.addEventListener('confirmed', (event) => this.act(event.target));
+    },
+
+    async show(url, trigger, push = true) {
+        if (this.fetching || (push && this.open)) return;
+        this.fetching = true;
+        this.trigger = trigger ?? this.trigger;
+        if (push) {
+            this.pageTitle = document.title;
+            history.pushState({ taskModal: true }, '', url);
+        }
+        // Either we just added this history entry or Forward brought us back to it; closing goes Back.
+        this.pushed = true;
+
+        // Open straight away with a spinner only if the task is slow to arrive.
+        const slow = setTimeout(() => (this.loading = this.open = true), 150);
+        try {
+            const { html, title } = await request('GET', url);
+            this.$refs.content.innerHTML = html;
+            document.title = `${title} · ${this.pageTitle.split(' · ').at(-1)}`;
+            const taskId = this.$refs.content.querySelector('[data-task-id]').dataset.taskId;
+            initChecklist(this.$refs.content, (done, total) => updateChecklistBadge(taskId, done, total));
+        } catch {
+            clearTimeout(slow);
+            this.fetching = false;
+            toast('Could not open the task.', 'error');
+            this.close();
+            return;
+        }
+
+        clearTimeout(slow);
+        this.fetching = false;
+        this.loading = false;
+        this.open = true;
+        document.body.classList.add('overflow-hidden');
+        this.$nextTick(() => this.$refs.content.querySelector('[data-modal-close]')?.focus());
+    },
+
+    /** Close via history when we added an entry, so Back and the close button agree. */
+    close() {
+        if (this.pushed) {
+            history.back();
+        } else {
+            this.hide();
+        }
+    },
+
+    hide() {
+        this.open = false;
+        this.pushed = false;
+        document.title = this.pageTitle;
+        document.body.classList.remove('overflow-hidden');
+        this.trigger?.isConnected && this.trigger.focus();
+    },
+
+    trapFocus(event) {
+        const focusable = [...this.$refs.panel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(
+            (element) => element.offsetParent !== null,
+        );
+        const first = focusable[0];
+        const last = focusable.at(-1);
+
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    },
+
+    /** Complete, reopen, delete or restore from the popup, then update the list behind it. */
+    async act(form) {
+        const action = MODAL_ACTIONS[form.dataset.modalAction];
+        const taskId = this.$refs.content.querySelector('[data-task-id]').dataset.taskId;
+        const card = document.querySelector(`#task-list .task-card[data-id="${taskId}"]`);
+        const item = document.querySelector(`#history-list [data-id="${taskId}"]`);
+        const buttons = this.$refs.content.querySelectorAll('footer button');
+        buttons.forEach((button) => (button.disabled = true));
+
+        const done = await serially(async () => {
+            try {
+                await request(action.method, form.action);
+            } catch {
+                return false;
+            }
+            if (card) closePriorityGap(card);
+            return true;
+        });
+
+        if (!done) {
+            buttons.forEach((button) => (button.disabled = false));
+            toast('Something went wrong. Please try again.', 'error');
+            return;
+        }
+
+        this.close();
+        await wait(200); // let the popup finish closing first
+
+        if (card && action === MODAL_ACTIONS.complete) {
+            await removeCompletedCard(card);
+        } else if (card) {
+            await animateOut(card);
+            decrementTaskCount();
+        } else if (item) {
+            await animateOut(item);
+        }
+        toast(action.message);
+    },
+}));
+
 Alpine.data('confirmDialog', () => ({
     open: false,
     busy: false,
@@ -381,6 +573,13 @@ Alpine.data('confirmDialog', () => ({
     },
 
     accept() {
+        // Forms in the task popup run their action in place, so hand control back to it.
+        if (this.form.dataset.modalAction) {
+            this.open = false;
+            this.form.dispatchEvent(new CustomEvent('confirmed', { bubbles: true }));
+            return;
+        }
+
         this.busy = true;
         // form.submit() skips the submit event, so this doesn't re-open the dialog.
         this.form.submit();

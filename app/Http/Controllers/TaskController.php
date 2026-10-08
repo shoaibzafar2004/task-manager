@@ -84,10 +84,51 @@ class TaskController extends Controller
 
     /**
      * Show one task in full. Deleted tasks can be viewed too, so History entries open.
+     *
+     * The list and History open tasks in a popup and ask for JSON, which carries just the
+     * task's card. Visiting the URL directly renders the full page.
      */
-    public function show(Task $task): View
+    public function show(Request $request, Task $task): View|JsonResponse
     {
-        return view('tasks.show', ['task' => $task->load(['project', 'labels'])]);
+        $task->load(['project', 'labels']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'title' => $task->title,
+                'html' => view('tasks.partials.detail', ['task' => $task, 'modal' => true])->render(),
+            ]);
+        }
+
+        [$backUrl, $backLabel] = $this->backLink($request, $task);
+
+        return view('tasks.show', ['task' => $task, 'backUrl' => $backUrl, 'backLabel' => $backLabel]);
+    }
+
+    /**
+     * Where the task page's "back" link goes: the list or History page the user came from.
+     *
+     * The origin is remembered in the session, so it survives completing or reopening the
+     * task on the page. Without one (a direct link), it follows the task's state.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function backLink(Request $request, Task $task): array
+    {
+        $previous = $request->headers->get('referer') ?? $request->session()->previousUrl();
+
+        if ($previous
+            && parse_url($previous, PHP_URL_HOST) === $request->getHost()
+            && in_array(parse_url($previous, PHP_URL_PATH) ?? '/', ['/', '/history'], true)) {
+            $request->session()->put('tasks.back', $previous);
+        }
+
+        $url = $request->session()->get('tasks.back') ?? match (true) {
+            $task->trashed() => route('history', ['tab' => 'deleted']),
+            $task->isCompleted() => route('history'),
+            default => route('tasks.index'),
+        };
+
+        return [$url, parse_url($url, PHP_URL_PATH) === '/history' ? 'History' : 'Tasks'];
     }
 
     public function edit(Task $task): View
@@ -118,11 +159,13 @@ class TaskController extends Controller
         return $redirect->with('status', 'Task updated.');
     }
 
-    public function destroy(Task $task): RedirectResponse
+    public function destroy(Request $request, Task $task): RedirectResponse|JsonResponse
     {
         $this->priorities->delete($task);
 
-        return back()->with('status', 'Task deleted.');
+        return $request->wantsJson()
+            ? response()->json(['deleted' => true])
+            : back()->with('status', 'Task deleted.');
     }
 
     /**
@@ -144,10 +187,12 @@ class TaskController extends Controller
         return response()->json(['priorities' => $this->priorities->reorder($request->validated('ids'))]);
     }
 
-    public function restore(int $id): RedirectResponse
+    public function restore(Request $request, int $id): RedirectResponse|JsonResponse
     {
         $this->priorities->restore(Task::onlyTrashed()->findOrFail($id));
 
-        return back()->with('status', 'Task restored.');
+        return $request->wantsJson()
+            ? response()->json(['restored' => true])
+            : back()->with('status', 'Task restored.');
     }
 }
