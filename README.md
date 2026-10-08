@@ -12,6 +12,7 @@ A small task manager built with Laravel 13 (PHP 8.3+), MySQL 8.4, Blade, Alpine.
 - Tick a task to complete it. It animates out of the list.
 - **History** page with tabs for Completed tasks (reopen or delete) and Deleted tasks (restore).
 - Project dropdown to show all tasks or one project's tasks. You can add and delete projects.
+- Coloured labels (e.g. *bug*, *waiting*). A task can have several. Filter by label on its own or together with a project and search.
 
 ## Setup
 ```bash

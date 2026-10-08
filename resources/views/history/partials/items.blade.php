@@ -18,6 +18,9 @@
             <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                 <x-project-badge :project="$task->project" />
                 <x-due-badge :task="$task" />
+                @foreach ($task->labels as $taskLabel)
+                    <x-label-chip :label="$taskLabel" />
+                @endforeach
                 <span>Created {{ $task->created_at->format('M j, Y') }}</span>
                 @if ($tab === 'completed')
                     <span class="text-emerald-600 dark:text-emerald-400">· Completed {{ $task->completed_at->diffForHumans() }}</span>

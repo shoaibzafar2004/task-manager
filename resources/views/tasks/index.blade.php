@@ -1,22 +1,31 @@
 <x-layouts.app title="Tasks">
     @php($currentProject = $projects->firstWhere('id', $projectId))
-    @php($projectErrors = $errors->has('name') || $errors->has('color'))
+    @php($currentLabel = $labels->firstWhere('id', $labelId))
 
-    <div x-data="{ showForm: {{ $errors->any() && ! $projectErrors ? 'true' : 'false' }}, showProject: {{ $projectErrors ? 'true' : 'false' }} }">
+    <div x-data="{ showForm: @js($errors->any()), showProject: @js($errors->project->any()), showLabel: @js($errors->label->any()) }">
         {{-- Header --}}
         <div class="mb-4 flex flex-wrap items-end justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{{ $currentProject?->name ?? 'All tasks' }}</h1>
+                <h1 class="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                    {{ $currentProject?->name ?? 'All tasks' }}
+                    @if ($currentLabel) <x-label-chip :label="$currentLabel" /> @endif
+                </h1>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     <span data-task-count>{{ $total }}</span> open {{ Str::plural('task', $total) }}@if ($search) matching “{{ $search }}”@endif · drag to reprioritise
                 </p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <button type="button" @click="showProject = true"
                         class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
                     <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                     Project
+                </button>
+
+                <button type="button" @click="showLabel = true"
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                    Label
                 </button>
 
                 <button type="button" @click="showForm = ! showForm; $nextTick(() => showForm && $refs.newTask.querySelector('#title').focus())"
@@ -29,15 +38,18 @@
 
         {{-- Toolbar --}}
         <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <x-search-box route="tasks.index" :search="$search" :params="['project' => $projectId]" />
-            <x-project-filter :projects="$projects" :project-id="$projectId" route="tasks.index" :params="['q' => $search]" />
+            <x-search-box route="tasks.index" :search="$search" :params="['project' => $projectId, 'label' => $labelId]" />
+            <div class="grid grid-cols-2 gap-2">
+                <x-filter-select :options="$projects" :selected="$projectId" param="project" all-text="All projects" route="tasks.index" :params="['label' => $labelId, 'q' => $search]" />
+                <x-filter-select :options="$labels" :selected="$labelId" param="label" all-text="All labels" route="tasks.index" :params="['project' => $projectId, 'q' => $search]" />
+            </div>
         </div>
 
         {{-- New task --}}
         <div x-show="showForm" x-collapse x-cloak x-ref="newTask">
             <form method="POST" action="{{ route('tasks.store') }}" class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 @csrf
-                <x-task-fields :projects="$projects" :project-id="$projectId" />
+                <x-task-fields :projects="$projects" :labels="$labels" :project-id="$projectId" :label-id="$labelId" />
                 <div class="mt-5 flex justify-end gap-2">
                     <button type="button" @click="showForm = false" class="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancel</button>
                     <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500">Add task</button>
@@ -66,47 +78,30 @@
             @endif
         </div>
 
-        @if ($currentProject)
-            <form method="POST" action="{{ route('projects.destroy', $currentProject) }}" class="mt-8 text-center"
-                  data-confirm-title="Delete project?"
-                  data-confirm="“{{ $currentProject->name }}” will be deleted. Its tasks are kept without a project. This can’t be undone."
-                  data-confirm-button="Delete project">
-                @csrf @method('DELETE')
-                <button class="text-xs text-slate-400 transition hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400">Delete this project</button>
-            </form>
+        @if ($currentProject || $currentLabel)
+            <div class="mt-8 flex justify-center gap-6">
+                @if ($currentProject)
+                    <form method="POST" action="{{ route('projects.destroy', $currentProject) }}"
+                          data-confirm-title="Delete project?"
+                          data-confirm="“{{ $currentProject->name }}” will be deleted. Its tasks are kept without a project. This can’t be undone."
+                          data-confirm-button="Delete project">
+                        @csrf @method('DELETE')
+                        <button class="text-xs text-slate-400 transition hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400">Delete this project</button>
+                    </form>
+                @endif
+                @if ($currentLabel)
+                    <form method="POST" action="{{ route('labels.destroy', $currentLabel) }}"
+                          data-confirm-title="Delete label?"
+                          data-confirm="“{{ $currentLabel->name }}” will be removed from all its tasks. The tasks themselves are kept. This can’t be undone."
+                          data-confirm-button="Delete label">
+                        @csrf @method('DELETE')
+                        <button class="text-xs text-slate-400 transition hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400">Delete this label</button>
+                    </form>
+                @endif
+            </div>
         @endif
 
-        {{-- New project modal --}}
-        <div x-show="showProject" x-cloak @keydown.escape.window="showProject = false"
-             class="fixed inset-0 z-40 grid place-items-center bg-slate-900/40 p-4 backdrop-blur-sm dark:bg-black/60"
-             x-transition.opacity>
-            <form method="POST" action="{{ route('projects.store') }}" @click.outside="showProject = false"
-                  x-data="{ color: @js(old('color', '#6366f1')) }"
-                  x-show="showProject" x-transition.scale.95
-                  class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:ring-1 dark:ring-slate-800">
-                @csrf
-                <h2 class="text-lg font-semibold text-slate-900 dark:text-white">New project</h2>
-
-                <label for="name" class="mt-4 mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
-                <input id="name" name="name" required maxlength="100" value="{{ old('name') }}" x-effect="showProject && $nextTick(() => $el.focus())"
-                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/20">
-                @error('name') <p class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
-
-                <span class="mt-4 mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Color</span>
-                <input type="hidden" name="color" :value="color">
-                <div class="flex flex-wrap gap-2">
-                    @foreach (['#6366f1', '#0ea5e9', '#10b981', '#84cc16', '#f59e0b', '#f97316', '#ef4444', '#ec4899', '#8b5cf6', '#64748b'] as $swatch)
-                        <button type="button" @click="color = '{{ $swatch }}'" aria-label="Color {{ $swatch }}"
-                                :class="color === '{{ $swatch }}' ? 'ring-2 ring-offset-2 ring-slate-400 scale-110 dark:ring-offset-slate-900' : ''"
-                                class="size-7 rounded-full transition" style="background-color: {{ $swatch }}"></button>
-                    @endforeach
-                </div>
-
-                <div class="mt-6 flex justify-end gap-2">
-                    <button type="button" @click="showProject = false" class="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancel</button>
-                    <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500">Create project</button>
-                </div>
-            </form>
-        </div>
+        <x-create-modal show="showProject" title="New project" :action="route('projects.store')" bag="project" button="Create project" />
+        <x-create-modal show="showLabel" title="New label" :action="route('labels.store')" bag="label" button="Create label" :maxlength="50" default-color="#0ea5e9" />
     </div>
 </x-layouts.app>

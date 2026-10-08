@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HistoryController;
+use App\Http\Controllers\LabelController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -20,3 +21,6 @@ Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->group
 
 Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
 Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+
+Route::post('/labels', [LabelController::class, 'store'])->name('labels.store');
+Route::delete('/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');

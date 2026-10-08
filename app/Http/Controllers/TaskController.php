@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
+use App\Models\Label;
 use App\Models\Project;
 use App\Models\Task;
 use App\Services\TaskPriorityService;
@@ -32,12 +33,13 @@ class TaskController extends Controller
     public function index(Request $request): View|JsonResponse
     {
         $projectId = $request->integer('project') ?: null;
+        $labelId = $request->integer('label') ?: null;
         $search = trim($request->string('q')) ?: null;
 
-        $query = Task::active()->forProject($projectId)->search($search);
+        $query = Task::active()->forProject($projectId)->withLabel($labelId)->search($search);
 
         $tasks = $query->clone()
-            ->with('project')
+            ->with(['project', 'labels'])
             ->where('priority', '>', $request->integer('after'))
             ->orderBy('priority')
             ->limit(self::PER_PAGE + 1)
@@ -47,7 +49,7 @@ class TaskController extends Controller
         $tasks = $tasks->take(self::PER_PAGE);
 
         // The client appends `after` from its last visible card, which stays correct as tasks are completed.
-        $nextUrl = $hasMore ? route('tasks.index', ['project' => $projectId, 'q' => $search]) : null;
+        $nextUrl = $hasMore ? route('tasks.index', ['project' => $projectId, 'label' => $labelId, 'q' => $search]) : null;
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -61,17 +63,21 @@ class TaskController extends Controller
             'nextUrl' => $nextUrl,
             'total' => $query->count(),
             'projects' => Project::withCount(['tasks' => fn ($q) => $q->active()])->orderBy('name')->get(),
+            'labels' => Label::withCount(['tasks' => fn ($q) => $q->active()])->orderBy('name')->get(),
             'projectId' => $projectId,
+            'labelId' => $labelId,
             'search' => $search,
         ]);
     }
 
     public function store(StoreTaskRequest $request): RedirectResponse
     {
-        $this->priorities->create(
+        $task = $this->priorities->create(
             $request->safe()->only(['title', 'info', 'due_date', 'project_id']),
             $request->validated('priority'),
         );
+
+        $task->labels()->sync($request->validated('labels') ?? []);
 
         return back()->with('status', 'Task created.');
     }
@@ -81,6 +87,7 @@ class TaskController extends Controller
         return view('tasks.edit', [
             'task' => $task,
             'projects' => Project::orderBy('name')->get(),
+            'labels' => Label::orderBy('name')->get(),
             'maxPriority' => max(1, Task::active()->count()),
         ]);
     }
@@ -88,6 +95,7 @@ class TaskController extends Controller
     public function update(UpdateTaskRequest $request, Task $task): RedirectResponse
     {
         $task->update($request->safe()->only(['title', 'info', 'due_date', 'project_id']));
+        $task->labels()->sync($request->validated('labels') ?? []);
 
         if ($request->filled('priority')) {
             $this->priorities->move($task, $request->integer('priority'));

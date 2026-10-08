@@ -133,3 +133,46 @@ html.dark {
 .sortable-chosen {
     box-shadow: 0 10px 25px -5px rgb(15 23 42 / 0.15);
 }
+
+/* Label picker chips in the task form; --label is the label's colour */
+.label-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-slate-200);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-slate-600);
+    transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+.label-toggle:hover {
+    border-color: var(--label);
+}
+.label-toggle:has(:checked) {
+    border-color: var(--label);
+    background-color: color-mix(in oklab, var(--label) 14%, transparent);
+    color: var(--label);
+}
+.label-toggle:has(:focus-visible) {
+    outline: 2px solid var(--label);
+    outline-offset: 2px;
+}
+.label-toggle-check {
+    display: none;
+}
+.label-toggle:has(:checked) .label-toggle-check {
+    display: block;
+}
+.dark .label-toggle {
+    border-color: var(--color-slate-700);
+    color: var(--color-slate-300);
+}
+.dark .label-toggle:has(:checked) {
+    border-color: var(--label);
+    background-color: color-mix(in oklab, var(--label) 20%, transparent);
+    color: color-mix(in oklab, var(--label) 75%, white);
+}

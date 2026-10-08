@@ -113,7 +113,7 @@ class TaskTest extends TestCase
         $project = Project::firstWhere('name', 'Launch');
         $task = Task::factory()->create(['project_id' => $project->id]);
 
-        $this->post(route('projects.store'), ['name' => 'Launch', 'color' => '#10b981'])->assertSessionHasErrors('name');
+        $this->post(route('projects.store'), ['name' => 'Launch', 'color' => '#10b981'])->assertSessionHasErrorsIn('project', 'name');
 
         $this->delete(route('projects.destroy', $project))->assertRedirect(route('tasks.index'));
         $this->assertModelMissing($project);

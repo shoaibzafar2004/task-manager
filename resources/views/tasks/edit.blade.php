@@ -19,7 +19,7 @@
             </div>
         </div>
 
-        <x-task-fields :projects="$projects" :task="$task" :max-priority="$maxPriority" />
+        <x-task-fields :projects="$projects" :labels="$labels" :task="$task" :max-priority="$maxPriority" />
 
         <div class="mt-6 flex justify-end gap-2">
             <a href="{{ route('tasks.index') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancel</a>

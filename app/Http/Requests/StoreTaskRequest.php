@@ -16,6 +16,8 @@ class StoreTaskRequest extends FormRequest
             'info' => ['nullable', 'string', 'max:5000'],
             'due_date' => ['nullable', 'date'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'labels' => ['nullable', 'array'],
+            'labels.*' => ['integer', 'distinct', 'exists:labels,id'],
             'priority' => ['nullable', 'integer', 'min:1'],
         ];
     }

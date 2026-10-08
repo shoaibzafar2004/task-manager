@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['project_id', 'title', 'info', 'due_date', 'priority', 'completed_at'])]
@@ -34,6 +35,11 @@ class Task extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function labels(): BelongsToMany
+    {
+        return $this->belongsToMany(Label::class)->orderBy('name');
     }
 
     public function isCompleted(): bool
@@ -84,6 +90,12 @@ class Task extends Model
                 ->whereRaw("title LIKE ? ESCAPE '!'", [$pattern])
                 ->orWhereRaw("info LIKE ? ESCAPE '!'", [$pattern]));
         });
+    }
+
+    #[Scope]
+    protected function withLabel(Builder $query, ?int $labelId): void
+    {
+        $query->when($labelId, fn (Builder $q) => $q->whereHas('labels', fn (Builder $q) => $q->whereKey($labelId)));
     }
 
     #[Scope]

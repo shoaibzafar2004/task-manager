@@ -5,13 +5,16 @@
     </div>
 
     <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <x-search-box route="history" :search="$search" :params="['tab' => $tab, 'project' => $projectId]" />
-        <x-project-filter :projects="$projects" :project-id="$projectId" route="history" :params="['tab' => $tab, 'q' => $search]" />
+        <x-search-box route="history" :search="$search" :params="['tab' => $tab, 'project' => $projectId, 'label' => $labelId]" />
+        <div class="grid grid-cols-2 gap-2">
+            <x-filter-select :options="$projects" :selected="$projectId" param="project" all-text="All projects" route="history" :params="['tab' => $tab, 'label' => $labelId, 'q' => $search]" />
+            <x-filter-select :options="$labels" :selected="$labelId" param="label" all-text="All labels" route="history" :params="['tab' => $tab, 'project' => $projectId, 'q' => $search]" />
+        </div>
     </div>
 
     <div class="mb-4 flex gap-1 border-b border-slate-200 text-sm font-medium dark:border-slate-800">
         @foreach (['completed' => 'Completed', 'deleted' => 'Deleted'] as $key => $label)
-            <a href="{{ route('history', ['tab' => $key, 'project' => $projectId, 'q' => $search]) }}"
+            <a href="{{ route('history', ['tab' => $key, 'project' => $projectId, 'label' => $labelId, 'q' => $search]) }}"
                @class([
                    '-mb-px flex items-center gap-2 border-b-2 px-3 py-2 transition',
                    'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400' => $tab === $key,

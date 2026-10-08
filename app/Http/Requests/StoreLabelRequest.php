@@ -4,14 +4,14 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreProjectRequest extends FormRequest
+class StoreLabelRequest extends FormRequest
 {
     /**
-     * Errors go to their own bag so the page reopens the project modal, not the label one.
+     * Errors go to their own bag so the page reopens the label modal, not the project one.
      *
      * @var string
      */
-    protected $errorBag = 'project';
+    protected $errorBag = 'label';
 
     /**
      * @return array<string, mixed>
@@ -19,7 +19,7 @@ class StoreProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:100', 'unique:projects,name'],
+            'name' => ['required', 'string', 'max:50', 'unique:labels,name'],
             'color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];
     }
