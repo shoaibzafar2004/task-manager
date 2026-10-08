@@ -1,4 +1,4 @@
-@props(['projects', 'labels', 'task' => null, 'projectId' => null, 'labelId' => null, 'maxPriority' => null])
+@props(['projects', 'labels', 'task' => null, 'projectId' => null, 'labelId' => null, 'maxPriority' => null, 'dueDate' => null])
 
 @php($input = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-indigo-500/20')
 @php($label = 'mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300')
@@ -21,7 +21,7 @@
         @error('info') <p class="{{ $error }}">{{ $message }}</p> @enderror
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2">
         <div>
             <label for="project_id" class="{{ $label }}">Project</label>
             <select id="project_id" name="project_id" class="{{ $input }}">
@@ -35,8 +35,19 @@
 
         <div>
             <label for="due_date" class="{{ $label }}">Due date <span class="{{ $hint }}">(optional)</span></label>
-            <input id="due_date" name="due_date" type="date" value="{{ old('due_date', $task?->due_date?->toDateString()) }}" class="{{ $input }}">
+            <input id="due_date" name="due_date" type="date" value="{{ old('due_date', $task?->due_date?->toDateString() ?? $dueDate) }}" class="{{ $input }}">
             @error('due_date') <p class="{{ $error }}">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label for="recurrence" class="{{ $label }}">Repeat</label>
+            <select id="recurrence" name="recurrence" class="{{ $input }}">
+                <option value="">Doesn’t repeat</option>
+                @foreach (\App\Enums\Recurrence::cases() as $recurrence)
+                    <option value="{{ $recurrence->value }}" @selected(old('recurrence', $task?->recurrence?->value) === $recurrence->value)>{{ $recurrence->label() }}</option>
+                @endforeach
+            </select>
+            @error('recurrence') <p class="{{ $error }}">{{ $message }}</p> @enderror
         </div>
 
         @if (! $task?->isCompleted())

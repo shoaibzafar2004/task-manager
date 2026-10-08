@@ -73,14 +73,31 @@ function closePriorityGap(card) {
     });
 }
 
+/**
+ * After the server removed a task from the open list: if it was a repeating task, slot its
+ * next occurrence (same priority) in right below it; otherwise close the priority gap.
+ * Returns whether a replacement card was added.
+ */
+function placeNextOccurrence(card, next) {
+    if (!next?.html) {
+        closePriorityGap(card);
+        return false;
+    }
+
+    card.dataset.removed = '';
+    card.insertAdjacentHTML('afterend', next.html);
+    card.nextElementSibling.classList.add('is-arriving');
+    return true;
+}
+
 /** Strike through, slide out and drop a completed card from the list. */
-async function removeCompletedCard(card) {
+async function removeCompletedCard(card, replaced = false) {
     card.querySelector('.task-check').checked = true;
     card.classList.add('is-done');
     // Let the strike-through register before the card slides away.
     await wait(350);
     await animateOut(card);
-    decrementTaskCount();
+    if (!replaced) decrementTaskCount();
 }
 
 function decrementTaskCount() {
@@ -171,27 +188,25 @@ function initTaskList() {
         checkbox.disabled = true;
         card.classList.add('is-done');
 
-        const completed = await serially(async () => {
+        const outcome = await serially(async () => {
             try {
-                await request('PATCH', checkbox.dataset.toggleUrl);
+                const { next } = await request('PATCH', checkbox.dataset.toggleUrl);
+                return { replaced: placeNextOccurrence(card, next) };
             } catch {
                 card.classList.remove('is-done');
-                return false;
+                return null;
             }
-
-            closePriorityGap(card);
-            return true;
         });
 
-        if (!completed) {
+        if (!outcome) {
             checkbox.checked = false;
             checkbox.disabled = false;
             toast('Could not complete the task.', 'error');
             return;
         }
 
-        await removeCompletedCard(card);
-        toast('Task completed 🎉');
+        await removeCompletedCard(card, outcome.replaced);
+        toast(outcome.replaced ? 'Task completed. The next one is in the list 🔁' : 'Task completed 🎉');
     });
 }
 
@@ -400,6 +415,9 @@ Alpine.data('taskModal', () => ({
             this.show(link.href, link);
         });
 
+        // Lets other parts of the page (e.g. a reminder notification) open a task.
+        window.addEventListener('open-task', (event) => this.show(event.detail.url, null));
+
         window.addEventListener('popstate', (event) => {
             if (event.state?.taskModal) {
                 this.show(window.location.href, null, false);
@@ -498,17 +516,16 @@ Alpine.data('taskModal', () => ({
         const buttons = this.$refs.content.querySelectorAll('footer button');
         buttons.forEach((button) => (button.disabled = true));
 
-        const done = await serially(async () => {
+        const outcome = await serially(async () => {
             try {
-                await request(action.method, form.action);
+                const result = await request(action.method, form.action);
+                return { replaced: card ? placeNextOccurrence(card, result.next) : false };
             } catch {
-                return false;
+                return null;
             }
-            if (card) closePriorityGap(card);
-            return true;
         });
 
-        if (!done) {
+        if (!outcome) {
             buttons.forEach((button) => (button.disabled = false));
             toast('Something went wrong. Please try again.', 'error');
             return;
@@ -518,14 +535,14 @@ Alpine.data('taskModal', () => ({
         await wait(200); // let the popup finish closing first
 
         if (card && action === MODAL_ACTIONS.complete) {
-            await removeCompletedCard(card);
+            await removeCompletedCard(card, outcome.replaced);
         } else if (card) {
             await animateOut(card);
             decrementTaskCount();
         } else if (item) {
             await animateOut(item);
         }
-        toast(action.message);
+        toast(outcome.replaced ? 'Task completed. The next one is in the list 🔁' : action.message);
     },
 }));
 
@@ -589,6 +606,126 @@ Alpine.data('confirmDialog', () => ({
         this.busy = true;
         // form.submit() skips the submit event, so this doesn't re-open the dialog.
         this.form.submit();
+    },
+}));
+
+/** How often an open tab checks for tasks that have become due. */
+const REMINDER_INTERVAL = 15 * 60 * 1000;
+const REMINDER_KEY = 'reminders';
+
+function readReminderState() {
+    try {
+        return JSON.parse(localStorage.getItem(REMINDER_KEY)) ?? {};
+    } catch {
+        return {};
+    }
+}
+
+function saveReminderState(state) {
+    try {
+        localStorage.setItem(REMINDER_KEY, JSON.stringify(state));
+    } catch {
+        // Storage can be unavailable (private mode); reminders then just aren't remembered.
+    }
+}
+
+/**
+ * The bell in the header. When switched on, the open tab checks every 15 minutes for tasks
+ * due today or overdue and shows a browser notification for each one, once per day.
+ */
+Alpine.data('reminders', (url) => ({
+    enabled: false,
+    permission: 'Notification' in window ? Notification.permission : 'unsupported',
+    timer: null,
+
+    get state() {
+        if (this.permission === 'unsupported' || this.permission === 'denied') return 'blocked';
+        return this.enabled && this.permission === 'granted' ? 'on' : 'off';
+    },
+    get on() {
+        return this.state === 'on';
+    },
+    get label() {
+        return {
+            on: 'Reminders on: you’ll be notified about tasks due today',
+            off: 'Turn on reminders for tasks due today',
+            blocked: 'Reminders are blocked in this browser’s notification settings',
+        }[this.state];
+    },
+
+    init() {
+        this.enabled = readReminderState().enabled === true;
+        this.schedule();
+    },
+
+    async toggle() {
+        if (this.state === 'blocked') {
+            toast('Notifications are blocked. Allow them for this site in your browser settings.', 'error');
+            return;
+        }
+        if (this.on) {
+            this.enabled = false;
+            saveReminderState({ ...readReminderState(), enabled: false });
+            this.schedule();
+            toast('Reminders turned off.');
+            return;
+        }
+
+        if (this.permission !== 'granted') {
+            this.permission = await Notification.requestPermission();
+        }
+        if (this.permission !== 'granted') {
+            toast('Reminders need permission to show notifications.', 'error');
+            return;
+        }
+
+        this.enabled = true;
+        saveReminderState({ ...readReminderState(), enabled: true });
+        toast('Reminders on. You’ll be notified about tasks due today while this tab is open.');
+        this.schedule();
+    },
+
+    schedule() {
+        clearInterval(this.timer);
+        if (!this.on) return;
+        this.check();
+        this.timer = setInterval(() => this.check(), REMINDER_INTERVAL);
+    },
+
+    async check() {
+        let tasks;
+        try {
+            ({ tasks } = await request('GET', url));
+        } catch {
+            return; // try again at the next interval
+        }
+
+        // Remember which tasks were already announced today, across tabs and reloads.
+        const today = new Date().toDateString();
+        const state = readReminderState();
+        const shown = state.date === today ? (state.shown ?? []) : [];
+        const fresh = tasks.filter((task) => !shown.includes(task.id));
+        if (fresh.length === 0) return;
+
+        if (fresh.length > 3) {
+            new Notification(`${fresh.length} tasks need attention`, {
+                body: fresh
+                    .slice(0, 3)
+                    .map((task) => `• ${task.title}`)
+                    .concat('…')
+                    .join('\n'),
+                tag: 'task-reminders',
+            }).onclick = () => window.focus();
+        } else {
+            fresh.forEach((task) => {
+                new Notification(task.title, { body: task.due, tag: `task-${task.id}` }).onclick = () => {
+                    window.focus();
+                    window.dispatchEvent(new CustomEvent('open-task', { detail: { url: task.url } }));
+                };
+            });
+        }
+
+        saveReminderState({ ...state, date: today, shown: [...shown, ...fresh.map((task) => task.id)] });
     },
 }));
 

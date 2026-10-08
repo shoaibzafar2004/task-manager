@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Label;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\RecurringTasks;
 use App\Services\TaskPriorityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,12 +17,20 @@ use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    public function __construct(private TaskPriorityService $priorities) {}
+    public function __construct(
+        private TaskPriorityService $priorities,
+        private RecurringTasks $recurring,
+    ) {}
 
     /**
      * How many open tasks are loaded per batch.
      */
     public const PER_PAGE = 100;
+
+    /**
+     * Due-date views shown as tabs on the task list, besides "All".
+     */
+    public const VIEWS = ['today', 'upcoming'];
 
     /**
      * Show open tasks in priority order, one batch at a time.
@@ -35,8 +44,10 @@ class TaskController extends Controller
         $projectId = $request->integer('project') ?: null;
         $labelId = $request->integer('label') ?: null;
         $search = trim($request->string('q')) ?: null;
+        $view = in_array($request->query('view'), self::VIEWS, true) ? $request->query('view') : null;
 
-        $query = Task::active()->forProject($projectId)->withLabel($labelId)->search($search);
+        $filtered = Task::active()->forProject($projectId)->withLabel($labelId)->search($search);
+        $query = $filtered->clone()->dueIn($view);
 
         $tasks = $query->clone()
             ->with(['project', 'labels'])
@@ -49,7 +60,7 @@ class TaskController extends Controller
         $tasks = $tasks->take(self::PER_PAGE);
 
         // The client appends `after` from its last visible card, which stays correct as tasks are completed.
-        $nextUrl = $hasMore ? route('tasks.index', ['project' => $projectId, 'label' => $labelId, 'q' => $search]) : null;
+        $nextUrl = $hasMore ? route('tasks.index', ['view' => $view, 'project' => $projectId, 'label' => $labelId, 'q' => $search]) : null;
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -67,13 +78,21 @@ class TaskController extends Controller
             'projectId' => $projectId,
             'labelId' => $labelId,
             'search' => $search,
+            'view' => $view,
+            // Tab counts follow the project, label and search filters currently applied.
+            'viewCounts' => [
+                'all' => $view === null ? null : $filtered->clone()->count(),
+                'today' => $filtered->clone()->dueIn('today')->count(),
+                'overdue' => $filtered->clone()->whereDate('due_date', '<', today())->count(),
+                'upcoming' => $filtered->clone()->dueIn('upcoming')->count(),
+            ],
         ]);
     }
 
     public function store(StoreTaskRequest $request): RedirectResponse
     {
         $task = $this->priorities->create(
-            $request->safe()->only(['title', 'info', 'due_date', 'project_id']),
+            $request->safe()->only(['title', 'info', 'due_date', 'recurrence', 'project_id']),
             $request->validated('priority'),
         );
 
@@ -143,7 +162,7 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, Task $task): RedirectResponse
     {
-        $task->update($request->safe()->only(['title', 'info', 'due_date', 'project_id']));
+        $task->update($request->safe()->only(['title', 'info', 'due_date', 'recurrence', 'project_id']));
         $task->labels()->sync($request->validated('labels') ?? []);
 
         if ($request->filled('priority')) {
@@ -173,13 +192,33 @@ class TaskController extends Controller
      */
     public function toggle(Request $request, Task $task): JsonResponse|RedirectResponse
     {
-        $task->isCompleted() ? $this->priorities->uncomplete($task) : $this->priorities->complete($task);
+        $next = null;
 
-        if ($request->wantsJson()) {
-            return response()->json(['completed' => $task->isCompleted(), 'priority' => $task->priority]);
+        if ($task->isCompleted()) {
+            $this->priorities->uncomplete($task);
+        } else {
+            $position = $task->priority;
+            $this->priorities->complete($task);
+            // A repeating task comes back as a new task in the same place.
+            $next = $this->recurring->scheduleNext($task, $position)?->load(['project', 'labels']);
         }
 
-        return back()->with('status', $task->isCompleted() ? 'Task completed.' : 'Task reopened.');
+        if ($request->wantsJson()) {
+            return response()->json([
+                'completed' => $task->isCompleted(),
+                'priority' => $task->priority,
+                'next' => $next ? [
+                    'id' => $next->id,
+                    'html' => view('tasks.partials.cards', ['tasks' => collect([$next])])->render(),
+                ] : null,
+            ]);
+        }
+
+        return back()->with('status', match (true) {
+            $next !== null => 'Task completed. Next one due '.$next->due_date->format('M j').'.',
+            $task->isCompleted() => 'Task completed.',
+            default => 'Task reopened.',
+        });
     }
 
     public function reorder(ReorderTasksRequest $request): JsonResponse

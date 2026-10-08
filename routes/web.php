@@ -5,6 +5,7 @@ use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\MarkdownPreviewController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\TaskChecklistController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -33,3 +34,5 @@ Route::post('/labels', [LabelController::class, 'store'])->name('labels.store');
 Route::delete('/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
 
 Route::post('/markdown/preview', MarkdownPreviewController::class)->name('markdown.preview');
+
+Route::get('/reminders', ReminderController::class)->name('reminders');
