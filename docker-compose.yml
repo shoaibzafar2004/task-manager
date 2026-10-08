@@ -1,4 +1,26 @@
 services:
+  # The task manager itself: http://localhost:${APP_PORT}
+  app:
+    build: .
+    image: task-manager-app
+    container_name: task-manager-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:${APP_PORT:-8800}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      LOG_CHANNEL: stderr
+      # Own cookie name, so it doesn't clash with `composer run dev` on another localhost port.
+      SESSION_COOKIE: task_manager_app_session
+    ports:
+      - "${APP_PORT:-8800}:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   mysql:
     image: mysql:8.4
     container_name: task-manager-mysql
@@ -9,7 +31,8 @@ services:
       MYSQL_PASSWORD: secret
       MYSQL_ROOT_PASSWORD: root
     ports:
-      - "3306:3306"
+      # 3307 on the host leaves 3306 free for other projects.
+      - "${FORWARD_DB_PORT:-3307}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -17,6 +40,28 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  # Dumps the database to ./backups once a day and keeps the last 14 days.
+  backup:
+    image: mysql:8.4
+    container_name: task-manager-backup
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_PWD: secret
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          file=/backups/task_manager-$$(date +%F).sql.gz
+          mysqldump -h mysql -u task --single-transaction --no-tablespaces task_manager | gzip > "$$file.tmp" && mv "$$file.tmp" "$$file"
+          find /backups -name 'task_manager-*.sql.gz' -mtime +14 -delete
+          sleep 86400
+        done
 
 volumes:
   mysql-data:

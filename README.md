@@ -45,43 +45,81 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 
 ## Getting started
 
-### Requirements
+There are two ways to run it:
+
+- **[Use it](#use-it-with-docker):** everything runs in Docker and starts with your computer. Only Docker is needed.
+- **[Develop it](#develop-it):** PHP and Vite run on your machine with hot reload, against the same MySQL container.
+
+### Use it with Docker
+
+Requires Docker with Compose.
+
+```bash
+git clone git@github.com:shoaibzafar2004/task-manager.git
+cd task-manager
+cp .env.example .env
+
+docker compose build app
+key=$(docker compose run --rm --no-deps --entrypoint php app artisan key:generate --show)
+sed -i "s|^APP_KEY=.*|APP_KEY=$key|" .env      # on macOS: sed -i ''
+
+docker compose up -d
+```
+
+Open **http://localhost:8800**. Three containers start, and they come back automatically after a reboot:
+
+| Container             | What it does                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `task-manager-app`    | The app, served by FrankenPHP. Runs database migrations and caches config/routes/views on every start. |
+| `task-manager-mysql`  | MySQL 8.4, with its data in the `mysql-data` Docker volume. Host port 3307.                            |
+| `task-manager-backup` | Dumps the database to `./backups` once a day and keeps the last 14 days.                               |
+
+**After pulling new code**, rebuild the app so the running copy picks it up:
+
+```bash
+docker compose up -d --build app
+```
+
+**Ports:** the app uses `APP_PORT` (8800) and MySQL `FORWARD_DB_PORT` (3307), both set in `.env`. They're chosen to stay clear of other projects, which usually use 8000 and 3306. Change them there if something else needs them.
+
+**Backups and restoring:**
+
+```bash
+ls backups/                                                   # task_manager-YYYY-MM-DD.sql.gz
+gunzip < backups/task_manager-2026-10-08.sql.gz | docker exec -i task-manager-mysql mysql -utask -psecret task_manager
+```
+
+The files in `backups/` are created by the container, so they're owned by `root`. Use `sudo` to delete them by hand.
+
+**Your data is protected:** `migrate:fresh`, `migrate:refresh`, `migrate:reset` and `db:wipe` are blocked outside the test suite (see `AppServiceProvider`). Don't run `db:seed` against your real data either, because it adds the demo tasks.
+
+### Develop it
+
+Requires:
 
 - PHP 8.3 or newer, with the `pdo_mysql` and `pdo_sqlite` extensions
 - Composer 2
 - Node.js 20.19+ or 22.12+ (developed on 24) and npm
 - Docker, for MySQL. Any MySQL 8 server works too.
 
-### Setup
-
 ```bash
-git clone git@github.com:shoaibzafar2004/task-manager.git
-cd task-manager
-
 composer install
 npm install
 
-cp .env.example .env
+cp .env.example .env               # skip if you set up the Docker app above
 php artisan key:generate
 
-docker compose up -d          # MySQL 8.4 on 127.0.0.1:3306 (database task_manager, user task, password secret)
-php artisan migrate --seed    # creates the tables and adds demo data
+docker compose up -d mysql         # MySQL 8.4 on 127.0.0.1:3307 (database task_manager, user task, password secret)
+php artisan migrate                # creates the tables
 
-composer run dev              # web server, queue, logs and Vite → http://127.0.0.1:8000
+composer run dev                   # web server, queue, logs and Vite → http://127.0.0.1:8000
 ```
 
-The seeder adds 3 projects, 4 labels (_bug_, _feature_, _quick win_, _waiting_), 10 open tasks with due dates and 2 completed tasks. Skip `--seed` to start empty.
+The development server and the Docker app share the same database. To try the app with demo data, use a separate database: set `DB_DATABASE` in `.env` to a new database, then run `php artisan migrate --seed`. The seeder adds 3 projects, 4 labels (_bug_, _feature_, _quick win_, _waiting_), 10 open tasks with due dates and 2 completed tasks.
 
 To use your own MySQL server instead of Docker, set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD` in `.env`.
 
 Restart `composer run dev` after changing `.env`. Its long-running processes keep the values they started with.
-
-### Production build
-
-```bash
-npm run build
-php artisan migrate --force
-```
 
 ## Using the app
 
@@ -203,6 +241,8 @@ resources/
     └── history/          History page and partials
 tests/Feature/            PHPUnit feature tests
 .github/                  CI workflow and Dependabot config
+Dockerfile, docker/       app image (Vite build + FrankenPHP) and its startup script
+docker-compose.yml        app, MySQL and daily backup containers
 ```
 
 ### Database
