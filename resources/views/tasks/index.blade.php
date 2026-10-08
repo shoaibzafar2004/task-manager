@@ -68,7 +68,9 @@
 
         @if ($currentProject)
             <form method="POST" action="{{ route('projects.destroy', $currentProject) }}" class="mt-8 text-center"
-                  onsubmit="return confirm('Delete project “{{ addslashes($currentProject->name) }}”? Its tasks will be kept without a project.')">
+                  data-confirm-title="Delete project?"
+                  data-confirm="“{{ $currentProject->name }}” will be deleted. Its tasks are kept without a project. This can’t be undone."
+                  data-confirm-button="Delete project">
                 @csrf @method('DELETE')
                 <button class="text-xs text-slate-400 transition hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400">Delete this project</button>
             </form>

@@ -31,7 +31,10 @@
             @if ($tab === 'completed')
                 <button type="button" data-reopen-url="{{ route('tasks.toggle', $task) }}"
                         class="reopen-btn rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400">Reopen</button>
-                <form method="POST" action="{{ route('tasks.destroy', $task) }}" onsubmit="return confirm('Delete this task?')">
+                <form method="POST" action="{{ route('tasks.destroy', $task) }}"
+                      data-confirm-title="Delete task?"
+                      data-confirm="“{{ $task->title }}” will move to History → Deleted, where you can restore it."
+                      data-confirm-button="Delete task">
                     @csrf @method('DELETE')
                     <button class="rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-400">Delete</button>
                 </form>

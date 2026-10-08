@@ -57,6 +57,8 @@
             {{ $slot }}
         </main>
 
+        <x-confirm-dialog />
+
         {{-- Toasts --}}
         <div x-data="toasts(@js(session('status')))"
              @toast.window="push($event.detail)"

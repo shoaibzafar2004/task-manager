@@ -197,6 +197,62 @@ Alpine.data('toasts', (initial) => ({
     },
 }));
 
+Alpine.data('confirmDialog', () => ({
+    open: false,
+    busy: false,
+    title: '',
+    message: '',
+    button: '',
+    form: null,
+    returnFocus: null,
+
+    init() {
+        // Capture phase, so the dialog intercepts every opted-in form before it submits.
+        document.addEventListener(
+            'submit',
+            (event) => {
+                const form = event.target.closest('form[data-confirm]');
+                if (!form) return;
+
+                event.preventDefault();
+                this.ask(form);
+            },
+            true,
+        );
+
+        // Pages restored from the back/forward cache would otherwise reopen mid-delete.
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                this.open = this.busy = false;
+            }
+        });
+    },
+
+    ask(form) {
+        this.form = form;
+        this.title = form.dataset.confirmTitle || 'Are you sure?';
+        this.message = form.dataset.confirm;
+        this.button = form.dataset.confirmButton || 'Confirm';
+        this.busy = false;
+        this.returnFocus = document.activeElement;
+        this.open = true;
+        // Default to the safe choice, like the native dialog.
+        this.$nextTick(() => this.$refs.cancel.focus());
+    },
+
+    cancel() {
+        if (this.busy) return;
+        this.open = false;
+        this.returnFocus?.focus();
+    },
+
+    accept() {
+        this.busy = true;
+        // form.submit() skips the submit event, so this doesn't re-open the dialog.
+        this.form.submit();
+    },
+}));
+
 Alpine.data('themeToggle', () => ({
     dark: document.documentElement.classList.contains('dark'),
     toggle() {
