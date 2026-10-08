@@ -1,57 +1,215 @@
 # Task Manager
 
-A small task manager built with Laravel 13 (PHP 8.3+), MySQL 8.4, Blade, Alpine.js, Tailwind CSS 4 and SortableJS.
+A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alpine.js**, **Tailwind CSS 4** and **SortableJS**. Tasks are kept in priority order, can be reordered by drag and drop, and can be grouped by project, tagged with labels and given Markdown details with checklists.
 
 ## Features
 
-- Create, edit and delete tasks. Each task has a title, info, priority, timestamps, an optional project and an optional due date.
-- Due-date badges show when a task is overdue, due today or due soon.
-- Search tasks by title or details, on both the Tasks and History pages.
-- Dark mode toggle. It follows your system setting until you choose, then remembers your choice.
-- Drag and drop to reorder tasks. Priorities (1 = highest) are saved automatically.
-- Tasks are always sorted by priority. Long lists load 100 at a time as you scroll (History loads 20 at a time).
-- Tick a task to complete it. It animates out of the list.
-- Click a task's title to open it in a popup with every detail and actions (complete, edit, delete, restore). The URL changes, so Back closes it and the link opens as a full page.
-- Write details in Markdown (headings, lists, links, code), with a formatting toolbar and live preview.
-- Checklists (`- [ ] step`) can be ticked right on the task page. Cards show progress such as `2/5`.
-- **History** page with tabs for Completed tasks (reopen or delete) and Deleted tasks (restore).
-- Project dropdown to show all tasks or one project's tasks. You can add and delete projects.
-- Coloured labels (e.g. _bug_, _waiting_). A task can have several. Filter by label on its own or together with a project and search.
+### Tasks
 
-## Setup
+- Create, edit and delete tasks. Each task has a title, details, priority, an optional project, labels and an optional due date, plus created, updated and completed times.
+- Tasks are always **sorted by priority** (1 = highest). **Drag and drop** to reorder them, and the priorities are saved automatically.
+- Tick a task's checkbox to **complete** it. The title is struck through and the card slides out of the list.
+- **Due-date badges** show when a task is overdue (red), due today (amber), due within 2 days (blue) or due later.
+- Deleting asks for confirmation in a themed dialog. Deleted tasks can be restored.
+
+### Organising
+
+- **Projects:** each task can belong to one project. Use the dropdown to show all tasks or one project's tasks.
+- **Labels** such as _bug_ or _waiting_: a task can have several, each with its own colour.
+- **Search** by title or details.
+- Projects, labels and search combine, for example "Mobile app" + _bug_ + "login". They work on the Tasks and History pages and through "load more".
+
+### Viewing and details
+
+- Click a task's title to open it in a **popup** over the list, with open and close animations. The address bar changes to `/tasks/{id}`, so the browser's Back button closes it. Opening that link directly, or in a new tab, shows the task as a full page.
+- From the popup you can complete, edit, delete or restore the task, and the list behind it updates in place.
+- **Details are written in Markdown:** headings, bold and italic, lists, links, code and tables. The editor has a formatting toolbar, Write / Preview tabs and a character counter (up to 20,000 characters), and it grows as you type.
+- **Checklists:** write `- [ ] step` in the details, then tick the boxes directly in the popup or on the task page. A progress bar shows how many are done, and cards show a `2/5` chip.
+
+### History and interface
+
+- The **History** page has a _Completed_ tab (reopen or delete) and a _Deleted_ tab (restore).
+- **Long lists load in batches as you scroll:** 100 open tasks at a time, and 20 History entries at a time.
+- **Dark mode:** it follows your system setting until you use the toggle in the header, then remembers your choice.
+- Responsive layout and keyboard support. Popups and dialogs keep focus inside, close with Escape and return focus to where you were.
+
+## Tech stack
+
+| Area       | Tools                                                                             |
+| ---------- | --------------------------------------------------------------------------------- |
+| Backend    | Laravel 13, PHP 8.3+ (developed on 8.4), MySQL 8.4                                |
+| Frontend   | Blade components, Alpine.js (+ Collapse plugin), Tailwind CSS 4, SortableJS, Vite |
+| Markdown   | `league/commonmark`, through Laravel's `Str::markdown` (GitHub-flavoured)         |
+| Quality    | PHPUnit, Laravel Pint, ESLint, Prettier                                           |
+| Automation | GitHub Actions, Dependabot                                                        |
+
+## Getting started
+
+### Requirements
+
+- PHP 8.3 or newer, with the `pdo_mysql` and `pdo_sqlite` extensions
+- Composer 2
+- Node.js 20.19+ or 22.12+ (developed on 24) and npm
+- Docker, for MySQL. Any MySQL 8 server works too.
+
+### Setup
 
 ```bash
+git clone git@github.com:shoaibzafar2004/task-manager.git
+cd task-manager
+
 composer install
 npm install
-cp .env.example .env && php artisan key:generate   # skip if .env already exists
 
-docker compose up -d          # MySQL 8.4 on 127.0.0.1:3306 (task / secret)
-php artisan migrate --seed    # tables plus demo data
+cp .env.example .env
+php artisan key:generate
 
-composer run dev              # app at http://127.0.0.1:8000, with Vite hot reload
+docker compose up -d          # MySQL 8.4 on 127.0.0.1:3306 (database task_manager, user task, password secret)
+php artisan migrate --seed    # creates the tables and adds demo data
+
+composer run dev              # web server, queue, logs and Vite → http://127.0.0.1:8000
 ```
 
-## Tests
+The seeder adds 3 projects, 4 labels (_bug_, _feature_, _quick win_, _waiting_), 10 open tasks with due dates and 2 completed tasks. Skip `--seed` to start empty.
+
+To use your own MySQL server instead of Docker, set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD` in `.env`.
+
+Restart `composer run dev` after changing `.env`. Its long-running processes keep the values they started with.
+
+### Production build
 
 ```bash
-php artisan test   # uses in-memory SQLite (see phpunit.xml)
+npm run build
+php artisan migrate --force
 ```
 
-## Continuous integration and dependency updates
+## Using the app
 
-- GitHub Actions runs three checks on every pull request into `main` and every push to it (`.github/workflows/ci.yml`):
-    - **Lint:** Laravel Pint for PHP and ESLint for JavaScript
-    - **Prettier:** formatting of JS, CSS, JSON, YAML and Markdown
-    - **Tests:** the asset build and the full test suite
-- Run the same checks locally with `composer lint`, `npm run lint`, `npm run format:check` and `php artisan test`. Fix formatting with `composer lint:fix` and `npm run format`.
-- Dependabot opens one pull request per package for Composer, npm and GitHub Actions, with at most one open per ecosystem at a time (`.github/dependabot.yml`).
-- Patch and minor updates are merged automatically once all three checks pass. Major updates are left for a manual review.
+| To…                       | Do this                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Add a task                | **New task**. Leave _Priority_ empty to add it at the bottom, or enter a number to insert it there.       |
+| Reorder                   | Drag a task by the handle (⋮⋮) on its left.                                                               |
+| Complete                  | Tick the round checkbox, or **Mark complete** in the popup.                                               |
+| See every detail          | Click the task's title.                                                                                   |
+| Add a project or label    | **+ Project** / **+ Label** in the header, then pick a colour.                                            |
+| Delete a project or label | Select it in the filter, then use the link at the bottom of the list. Its tasks are kept.                 |
+| Format details            | Use the toolbar, or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>B</kbd> for bold and + <kbd>I</kbd> for italic. |
+| Add a checklist           | The checklist toolbar button, or type `- [ ] item`.                                                       |
+| Find old tasks            | **History**, with the same search and filters.                                                            |
 
-## How priority works
+## Development
 
-Open tasks always hold a gapless sequence `1..n`. The logic lives in `app/Services/TaskPriorityService.php`:
+### Checks
 
-- **New task:** goes to the bottom, or to the position you enter, in which case the tasks below it shift down.
-- **Drag and drop:** the dragged tasks swap their existing priority slots. Reordering inside a filtered project never moves tasks from other projects.
-- **Completing or deleting a task:** the tasks below it move up to close the gap.
-- **Reopening or restoring a task:** it goes back to the bottom of the list.
+Run these before opening a pull request. CI runs the same ones.
+
+| Check                    | Command                | Fix automatically   |
+| ------------------------ | ---------------------- | ------------------- |
+| Tests (in-memory SQLite) | `php artisan test`     | —                   |
+| PHP code style (Pint)    | `composer lint`        | `composer lint:fix` |
+| JavaScript (ESLint)      | `npm run lint`         | `npm run lint:fix`  |
+| Formatting (Prettier)    | `npm run format:check` | `npm run format`    |
+
+Prettier covers JS, CSS, JSON, YAML and Markdown with 4 spaces, single quotes and 120 columns. PHP and Blade files are left to Pint.
+
+To run the tests against MySQL instead of SQLite, create a test database once and point the tests at it:
+
+```bash
+docker exec task-manager-mysql mysql -uroot -proot \
+  -e "CREATE DATABASE IF NOT EXISTS task_manager_test; GRANT ALL ON task_manager_test.* TO 'task'@'%';"
+
+DB_CONNECTION=mysql DB_DATABASE=task_manager_test php artisan test
+```
+
+### Contributing workflow
+
+1. Create a branch from `main`, e.g. `feature/due-date-reminders`.
+2. Make the change with tests, and run the checks above.
+3. Push the branch and open a pull request into `main`.
+4. GitHub Actions runs **Lint**, **Prettier** and **Tests**. The pull request can be merged once all three pass.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request into `main` and every push to `main`:
+
+- **Lint:** Laravel Pint (`pint --test`) and ESLint
+- **Prettier:** `prettier --check .`
+- **Tests:** builds the assets with Vite, then runs the full PHPUnit suite
+
+### Dependency updates
+
+`.github/dependabot.yml` keeps the dependencies current:
+
+- Composer and npm are checked daily, GitHub Actions weekly.
+- Each package gets **its own pull request**, with at most one open per ecosystem at a time.
+- **Patch and minor updates are merged automatically** once Lint, Prettier and Tests pass. **Major updates** wait for a manual review.
+
+### Protecting `main` (one-time GitHub setup)
+
+To block merges until the checks pass, in the GitHub repository go to **Settings → Rules → Rulesets → New branch ruleset**:
+
+1. Name it e.g. _Protect main_, set enforcement to **Active** and target the **default branch**.
+2. Enable **Require a pull request before merging**.
+3. Enable **Require status checks to pass** and add **Lint**, **Prettier** and **Tests**. They can be found once they've run at least once.
+4. Enable **Block force pushes**, then save.
+
+Add yourself to the **bypass list** if you need to push directly in an emergency.
+
+## How it works
+
+### Priorities
+
+Open tasks always hold a gapless sequence `1..n`. The rules live in [`app/Services/TaskPriorityService.php`](app/Services/TaskPriorityService.php), and every change runs in a database transaction:
+
+- **New task:** goes to the bottom, or to the position entered; the tasks below shift down.
+- **Drag and drop:** the moved tasks swap the priority slots they already held. Reordering a filtered view (by project, label or search) never moves tasks that aren't shown.
+- **Editing the priority:** the task moves to the new position and the tasks in between shift by one.
+- **Completing or deleting:** the tasks below move up to close the gap.
+- **Reopening or restoring:** the task goes back to the bottom.
+
+### Loading long lists
+
+- **Open tasks load by priority** (`?after=N`) rather than by page number. Completing or reordering tasks while you scroll therefore never skips or repeats one. The browser sends the last priority it currently shows and renumbers it as tasks are completed. Completions and batch loads run one at a time, so the two can't overlap.
+- **History uses cursor pagination,** so reopening an entry doesn't shift the next batch.
+
+### Markdown and checklists
+
+- Task details are rendered by [`MarkdownRenderer`](app/Services/MarkdownRenderer.php). Raw HTML is escaped and unsafe links (`javascript:`, `data:`) lose their `href`, so user content can't inject scripts. External links open in a new tab with `noopener noreferrer`. The editor's preview is rendered by the same class on the server, so it always matches the page.
+- [`Checklist`](app/Services/Checklist.php) finds `- [ ]` entries in the same order as the rendered checkboxes, skipping fenced code blocks. A test checks the two always agree.
+- Each tick sends a version of the details it was rendered from. If the details changed elsewhere in the meantime, the server answers `409 Conflict` and the page reloads, instead of ticking the wrong line.
+
+### Task popup
+
+The list and History request a task as JSON and show it in a popup, using `history.pushState`. Loading the same URL directly renders the full page from the same Blade partial ([`tasks/partials/detail.blade.php`](resources/views/tasks/partials/detail.blade.php)), so the two can't drift apart.
+
+## Project structure
+
+```
+app/
+├── Http/Controllers/     TaskController, HistoryController, ProjectController, LabelController,
+│                         TaskChecklistController, MarkdownPreviewController
+├── Http/Requests/        Form Request validation for every write
+├── Models/               Task, Project, Label
+└── Services/             TaskPriorityService, MarkdownRenderer, Checklist
+database/
+├── migrations/           projects, tasks, labels, label_task
+└── seeders/              demo data
+resources/
+├── css/app.css           Tailwind setup, dark mode and component styles
+├── js/app.js             drag and drop, completion, load more, popup, editor, checklists
+└── views/
+    ├── components/       layout, dialogs, filters, badges, Markdown editor, …
+    ├── tasks/            list, task page, edit form and partials
+    └── history/          History page and partials
+tests/Feature/            PHPUnit feature tests
+.github/                  CI workflow and Dependabot config
+```
+
+### Database
+
+| Table        | Purpose                                                                                       |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| `tasks`      | title, details (Markdown), priority, due date, `completed_at`, soft deletes, optional project |
+| `projects`   | name and colour; deleting one keeps its tasks without a project                               |
+| `labels`     | name and colour                                                                               |
+| `label_task` | which labels each task has; deleting a label removes it from its tasks                        |
