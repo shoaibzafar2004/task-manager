@@ -32,6 +32,7 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 - The **History** page has a _Completed_ tab (reopen or delete) and a _Deleted_ tab (restore).
 - **Long lists load in batches as you scroll:** 100 open tasks at a time, and 20 History entries at a time.
 - **Dark mode:** it follows your system setting until you use the toggle in the header, then remembers your choice.
+- **Reminders:** click the bell in the header to get a browser notification for each task due today or overdue. It checks every 15 minutes and shows each task once a day. Clicking a notification opens the task. Works while the app is open in a tab.
 - Responsive layout and keyboard support. Popups and dialogs keep focus inside, close with Escape and return focus to where you were.
 
 ## Tech stack
