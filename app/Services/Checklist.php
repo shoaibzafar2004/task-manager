@@ -61,6 +61,22 @@ class Checklist
     }
 
     /**
+     * Untick every entry, e.g. for the next occurrence of a repeating task.
+     */
+    public function uncheckAll(?string $markdown): ?string
+    {
+        if ($markdown === null) {
+            return null;
+        }
+
+        foreach ($this->items($markdown) as $item) {
+            $markdown = substr_replace($markdown, ' ', $item['offset'], 1);
+        }
+
+        return $markdown;
+    }
+
+    /**
      * @return array{done: int, total: int}
      */
     public function progress(?string $markdown): array

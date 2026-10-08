@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Recurrence;
 use App\Services\Checklist;
 use App\Services\MarkdownRenderer;
 use Database\Factories\TaskFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['project_id', 'title', 'info', 'due_date', 'priority', 'completed_at'])]
+#[Fillable(['project_id', 'title', 'info', 'due_date', 'recurrence', 'priority', 'completed_at'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
@@ -30,6 +31,7 @@ class Task extends Model
         return [
             'priority' => 'integer',
             'due_date' => 'date',
+            'recurrence' => Recurrence::class,
             'completed_at' => 'datetime',
         ];
     }
