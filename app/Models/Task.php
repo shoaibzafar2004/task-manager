@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Checklist;
 use App\Services\MarkdownRenderer;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -57,6 +58,24 @@ class Task extends Model
     public function infoExcerpt(): string
     {
         return app(MarkdownRenderer::class)->toPlainText($this->info);
+    }
+
+    /**
+     * How many checklist entries in the details are ticked.
+     *
+     * @return array{done: int, total: int}
+     */
+    public function checklistProgress(): array
+    {
+        return app(Checklist::class)->progress($this->info);
+    }
+
+    /**
+     * Identifies the current details text, so a checklist tick can't land on a stale index.
+     */
+    public function checklistVersion(): string
+    {
+        return hash('xxh128', (string) $this->info);
     }
 
     public function isCompleted(): bool

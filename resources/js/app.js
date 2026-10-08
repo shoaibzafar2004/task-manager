@@ -12,7 +12,9 @@ async function request(method, url, body) {
     });
 
     if (!response.ok) {
-        throw new Error(`Request failed (${response.status})`);
+        const error = new Error(`Request failed (${response.status})`);
+        error.status = response.status;
+        throw error;
     }
 
     return response.json();
@@ -164,6 +166,49 @@ function initTaskList() {
         await animateOut(card);
         decrementTaskCount();
         toast('Task completed 🎉');
+    });
+}
+
+/** Lets checklist boxes in a task's rendered details be ticked in place. */
+function initChecklist() {
+    const details = document.querySelector('[data-checklist-url]');
+    if (!details) return;
+
+    const bar = document.querySelector('[data-checklist-bar]');
+    const count = document.querySelector('[data-checklist-count]');
+
+    details.querySelectorAll('input[type="checkbox"]').forEach((box, index) => {
+        box.disabled = false;
+        box.classList.add('cursor-pointer');
+
+        box.addEventListener('change', () => {
+            const checked = box.checked;
+            box.disabled = true;
+
+            // One at a time, so each request carries the version returned by the previous one.
+            serially(async () => {
+                try {
+                    const { version, done, total } = await request('PATCH', details.dataset.checklistUrl, {
+                        index,
+                        checked,
+                        version: details.dataset.checklistVersion,
+                    });
+                    details.dataset.checklistVersion = version;
+                    if (bar) bar.style.width = `${Math.round((done / total) * 100)}%`;
+                    if (count) count.textContent = `${done} of ${total} done`;
+                } catch (error) {
+                    box.checked = !checked;
+                    if (error.status === 409) {
+                        toast('This task was changed elsewhere. Reloading…', 'error');
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        toast('Could not update the checklist.', 'error');
+                    }
+                } finally {
+                    box.disabled = false;
+                }
+            });
+        });
     });
 }
 
@@ -362,3 +407,4 @@ Alpine.start();
 initTaskList();
 initHistory();
 initLoadMore();
+initChecklist();

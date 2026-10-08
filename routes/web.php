@@ -4,6 +4,7 @@ use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\MarkdownPreviewController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TaskChecklistController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,7 @@ Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->group
     Route::put('/{task}', 'update')->name('update');
     Route::delete('/{task}', 'destroy')->name('destroy');
     Route::patch('/{task}/toggle', 'toggle')->name('toggle');
+    Route::patch('/{task}/checklist', TaskChecklistController::class)->name('checklist');
     Route::patch('/{id}/restore', 'restore')->name('restore');
 });
 

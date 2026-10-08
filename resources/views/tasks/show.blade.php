@@ -45,8 +45,25 @@
         </header>
 
         <section class="p-6" aria-label="Details">
+            @php($progress = $task->checklistProgress())
+            @if ($progress['total'] > 0)
+                <div class="mb-4 flex items-center gap-3 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div data-checklist-bar class="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                             style="width: {{ round($progress['done'] / $progress['total'] * 100) }}%"></div>
+                    </div>
+                    <span data-checklist-count class="tabular-nums">{{ $progress['done'] }} of {{ $progress['total'] }} done</span>
+                </div>
+            @endif
+
             @if ($task->info)
-                <div class="prose-task">{!! $task->infoHtml() !!}</div>
+                {{-- Checklist boxes can be ticked here unless the task is deleted --}}
+                <div class="prose-task"
+                     @unless ($task->trashed())
+                         data-checklist-url="{{ route('tasks.checklist', $task) }}"
+                         data-checklist-version="{{ $task->checklistVersion() }}"
+                     @endunless
+                >{!! $task->infoHtml() !!}</div>
             @else
                 <p class="text-sm text-slate-400 italic dark:text-slate-500">No details for this task.</p>
             @endif
