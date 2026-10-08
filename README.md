@@ -1,0 +1,35 @@
+# Task Manager
+
+A small task manager built with Laravel 13 (PHP 8.3+), MySQL 8.4, Blade, Alpine.js, Tailwind CSS 4 and SortableJS.
+
+## Features
+- Create, edit and delete tasks. Each task has a title, info, priority, timestamps and an optional project.
+- Drag and drop to reorder tasks. Priorities (1 = highest) are saved automatically.
+- Tasks are always sorted by priority.
+- Tick a task to complete it. It animates out of the list.
+- **History** page with tabs for Completed tasks (reopen or delete) and Deleted tasks (restore).
+- Project dropdown to show all tasks or one project's tasks. You can add and delete projects.
+
+## Setup
+```bash
+composer install
+npm install
+cp .env.example .env && php artisan key:generate   # skip if .env already exists
+
+docker compose up -d          # MySQL 8.4 on 127.0.0.1:3306 (task / secret)
+php artisan migrate --seed    # tables plus demo data
+
+composer run dev              # app at http://127.0.0.1:8000, with Vite hot reload
+```
+
+## Tests
+```bash
+php artisan test   # uses in-memory SQLite (see phpunit.xml)
+```
+
+## How priority works
+Open tasks always hold a gapless sequence `1..n`. The logic lives in `app/Services/TaskPriorityService.php`:
+- **New task:** goes to the bottom, or to the position you enter, in which case the tasks below it shift down.
+- **Drag and drop:** the dragged tasks swap their existing priority slots. Reordering inside a filtered project never moves tasks from other projects.
+- **Completing or deleting a task:** the tasks below it move up to close the gap.
+- **Reopening or restoring a task:** it goes back to the bottom of the list.
