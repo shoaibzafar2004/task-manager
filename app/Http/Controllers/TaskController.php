@@ -28,6 +28,11 @@ class TaskController extends Controller
     public const PER_PAGE = 100;
 
     /**
+     * Due-date views shown as tabs on the task list, besides "All".
+     */
+    public const VIEWS = ['today', 'upcoming'];
+
+    /**
      * Show open tasks in priority order, one batch at a time.
      *
      * Batches are keyed on priority (`?after=N`) rather than page numbers, so completing or
@@ -39,8 +44,10 @@ class TaskController extends Controller
         $projectId = $request->integer('project') ?: null;
         $labelId = $request->integer('label') ?: null;
         $search = trim($request->string('q')) ?: null;
+        $view = in_array($request->query('view'), self::VIEWS, true) ? $request->query('view') : null;
 
-        $query = Task::active()->forProject($projectId)->withLabel($labelId)->search($search);
+        $filtered = Task::active()->forProject($projectId)->withLabel($labelId)->search($search);
+        $query = $filtered->clone()->dueIn($view);
 
         $tasks = $query->clone()
             ->with(['project', 'labels'])
@@ -53,7 +60,7 @@ class TaskController extends Controller
         $tasks = $tasks->take(self::PER_PAGE);
 
         // The client appends `after` from its last visible card, which stays correct as tasks are completed.
-        $nextUrl = $hasMore ? route('tasks.index', ['project' => $projectId, 'label' => $labelId, 'q' => $search]) : null;
+        $nextUrl = $hasMore ? route('tasks.index', ['view' => $view, 'project' => $projectId, 'label' => $labelId, 'q' => $search]) : null;
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -71,6 +78,14 @@ class TaskController extends Controller
             'projectId' => $projectId,
             'labelId' => $labelId,
             'search' => $search,
+            'view' => $view,
+            // Tab counts follow the project, label and search filters currently applied.
+            'viewCounts' => [
+                'all' => $view === null ? null : $filtered->clone()->count(),
+                'today' => $filtered->clone()->dueIn('today')->count(),
+                'overdue' => $filtered->clone()->whereDate('due_date', '<', today())->count(),
+                'upcoming' => $filtered->clone()->dueIn('upcoming')->count(),
+            ],
         ]);
     }
 

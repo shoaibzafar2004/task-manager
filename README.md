@@ -9,6 +9,7 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 - Create, edit and delete tasks. Each task has a title, details, priority, an optional project, labels and an optional due date, plus created, updated and completed times.
 - Tasks are always **sorted by priority** (1 = highest). **Drag and drop** to reorder them, and the priorities are saved automatically.
 - Tick a task's checkbox to **complete** it. The title is struck through and the card slides out of the list.
+- **Today** and **Upcoming** tabs: tasks overdue or due today, and tasks due in the next 7 days. The Today count turns red when something is overdue. The tabs keep the priority order and drag and drop, and combine with the project, label and search filters.
 - **Due-date badges** show when a task is overdue (red), due today (amber), due within 2 days (blue) or due later.
 - Deleting asks for confirmation in a themed dialog. Deleted tasks can be restored.
 - **Repeating tasks:** set _Repeat_ to daily, weekly or monthly. Completing one creates the next occurrence in the same spot in the list. It gets the next due date after today, the same project and labels, and an unticked checklist.
@@ -32,6 +33,7 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 - The **History** page has a _Completed_ tab (reopen or delete) and a _Deleted_ tab (restore).
 - **Long lists load in batches as you scroll:** 100 open tasks at a time, and 20 History entries at a time.
 - **Dark mode:** it follows your system setting until you use the toggle in the header, then remembers your choice.
+- **Reminders:** click the bell in the header to get a browser notification for each task due today or overdue. It checks every 15 minutes and shows each task once a day. Clicking a notification opens the task. Works while the app is open in a tab.
 - Responsive layout and keyboard support. Popups and dialogs keep focus inside, close with Escape and return focus to where you were.
 
 ## Tech stack
