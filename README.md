@@ -11,6 +11,7 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 - Tick a task's checkbox to **complete** it. The title is struck through and the card slides out of the list.
 - **Due-date badges** show when a task is overdue (red), due today (amber), due within 2 days (blue) or due later.
 - Deleting asks for confirmation in a themed dialog. Deleted tasks can be restored.
+- **Repeating tasks:** set _Repeat_ to daily, weekly or monthly. Completing one creates the next occurrence in the same spot in the list. It gets the next due date after today, the same project and labels, and an unticked checklist.
 
 ### Organising
 

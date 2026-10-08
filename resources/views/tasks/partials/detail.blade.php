@@ -29,6 +29,7 @@
             @endswitch
             <x-project-badge :project="$task->project" />
             <x-due-badge :task="$task" />
+            <x-recurrence-badge :task="$task" />
             @foreach ($task->labels as $taskLabel)
                 <x-label-chip :label="$taskLabel" />
             @endforeach

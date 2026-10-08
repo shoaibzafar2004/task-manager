@@ -20,6 +20,7 @@
             <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                 <x-project-badge :project="$task->project" />
                 <x-due-badge :task="$task" />
+                <x-recurrence-badge :task="$task" />
                 <x-checklist-badge :task="$task" />
                 @foreach ($task->labels as $taskLabel)
                     <x-label-chip :label="$taskLabel" />

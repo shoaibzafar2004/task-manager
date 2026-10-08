@@ -21,7 +21,7 @@
         @error('info') <p class="{{ $error }}">{{ $message }}</p> @enderror
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2">
         <div>
             <label for="project_id" class="{{ $label }}">Project</label>
             <select id="project_id" name="project_id" class="{{ $input }}">
@@ -37,6 +37,17 @@
             <label for="due_date" class="{{ $label }}">Due date <span class="{{ $hint }}">(optional)</span></label>
             <input id="due_date" name="due_date" type="date" value="{{ old('due_date', $task?->due_date?->toDateString()) }}" class="{{ $input }}">
             @error('due_date') <p class="{{ $error }}">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label for="recurrence" class="{{ $label }}">Repeat</label>
+            <select id="recurrence" name="recurrence" class="{{ $input }}">
+                <option value="">Doesn’t repeat</option>
+                @foreach (\App\Enums\Recurrence::cases() as $recurrence)
+                    <option value="{{ $recurrence->value }}" @selected(old('recurrence', $task?->recurrence?->value) === $recurrence->value)>{{ $recurrence->label() }}</option>
+                @endforeach
+            </select>
+            @error('recurrence') <p class="{{ $error }}">{{ $message }}</p> @enderror
         </div>
 
         @if (! $task?->isCompleted())

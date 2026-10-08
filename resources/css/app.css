@@ -124,6 +124,17 @@ html.dark {
         padding 350ms ease-in 150ms !important;
 }
 
+/* The next occurrence of a repeating task sliding into the list */
+.is-arriving {
+    animation: arrive 400ms ease-out;
+}
+@keyframes arrive {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+}
+
 /* Drag & drop */
 .sortable-ghost {
     opacity: 0.4;
