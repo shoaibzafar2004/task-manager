@@ -16,7 +16,7 @@
                 </h2>
             </div>
             @if ($task->info)
-                <p class="mt-1 line-clamp-2 text-sm whitespace-pre-line text-slate-500 dark:text-slate-400">{{ $task->info }}</p>
+                <p class="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ $task->infoExcerpt() }}</p>
             @endif
             <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                 <x-project-badge :project="$task->project" />

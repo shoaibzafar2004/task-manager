@@ -197,6 +197,95 @@ Alpine.data('toasts', (initial) => ({
     },
 }));
 
+Alpine.data('markdownEditor', (previewUrl) => ({
+    tab: 'write',
+    html: '',
+    loading: false,
+    length: 0,
+
+    init() {
+        this.length = this.$refs.input.value.length;
+        this.$nextTick(() => this.resize());
+    },
+
+    resize() {
+        const input = this.$refs.input;
+        input.style.height = 'auto';
+        input.style.height = `${input.scrollHeight + 2}px`;
+    },
+
+    write() {
+        this.tab = 'write';
+        this.$nextTick(() => {
+            this.resize();
+            this.$refs.input.focus();
+        });
+    },
+
+    async preview() {
+        this.tab = 'preview';
+        this.loading = true;
+        try {
+            ({ html: this.html } = await request('POST', previewUrl, { text: this.$refs.input.value }));
+        } catch {
+            this.html = '<p>Could not render the preview.</p>';
+        } finally {
+            this.loading = false;
+        }
+    },
+
+    /** Replace the range [start, end) with text, keeping the browser's undo history where possible. */
+    replace(start, end, text, selectFrom, selectTo) {
+        const input = this.$refs.input;
+        input.focus();
+        input.setSelectionRange(start, end);
+        if (!document.execCommand('insertText', false, text)) {
+            input.setRangeText(text, start, end, 'end');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        input.setSelectionRange(start + selectFrom, start + selectTo);
+    },
+
+    /** Surround the selection (or a placeholder) with a marker such as ** or _. */
+    wrap(marker, placeholder = 'text') {
+        const { selectionStart: start, selectionEnd: end, value } = this.$refs.input;
+        const selected = value.slice(start, end) || placeholder;
+        this.replace(start, end, `${marker}${selected}${marker}`, marker.length, marker.length + selected.length);
+    },
+
+    /** Add a prefix to every selected line, or remove it if all of them already have it. */
+    prefixLines(prefix) {
+        const { selectionStart, selectionEnd, value } = this.$refs.input;
+        const start = selectionStart === 0 ? 0 : value.lastIndexOf('\n', selectionStart - 1) + 1;
+        const lineEnd = value.indexOf('\n', selectionEnd);
+        const end = lineEnd === -1 ? value.length : lineEnd;
+
+        const lines = value.slice(start, end).split('\n');
+        const toggleOff = lines.every((line) => line.startsWith(prefix));
+        const text = lines.map((line) => (toggleOff ? line.slice(prefix.length) : prefix + line)).join('\n');
+
+        this.replace(start, end, text, text.length, text.length);
+    },
+
+    link() {
+        const { selectionStart: start, selectionEnd: end, value } = this.$refs.input;
+        const label = value.slice(start, end) || 'link text';
+        const url = 'https://';
+        // Select the URL so it can be typed over straight away.
+        this.replace(start, end, `[${label}](${url})`, label.length + 3, label.length + 3 + url.length);
+    },
+
+    code() {
+        const { selectionStart: start, selectionEnd: end, value } = this.$refs.input;
+        const selected = value.slice(start, end);
+        if (selected.includes('\n')) {
+            this.replace(start, end, `\`\`\`\n${selected}\n\`\`\``, 4, 4 + selected.length);
+        } else {
+            this.wrap('`', 'code');
+        }
+    },
+}));
+
 Alpine.data('confirmDialog', () => ({
     open: false,
     busy: false,

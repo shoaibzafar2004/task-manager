@@ -46,7 +46,7 @@
 
         <section class="p-6" aria-label="Details">
             @if ($task->info)
-                <div class="text-sm leading-relaxed wrap-break-word whitespace-pre-line text-slate-700 dark:text-slate-300">{{ $task->info }}</div>
+                <div class="prose-task">{!! $task->infoHtml() !!}</div>
             @else
                 <p class="text-sm text-slate-400 italic dark:text-slate-500">No details for this task.</p>
             @endif

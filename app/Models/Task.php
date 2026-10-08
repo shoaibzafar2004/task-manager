@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\MarkdownRenderer;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -40,6 +41,22 @@ class Task extends Model
     public function labels(): BelongsToMany
     {
         return $this->belongsToMany(Label::class)->orderBy('name');
+    }
+
+    /**
+     * The details rendered from Markdown. Safe to print unescaped.
+     */
+    public function infoHtml(): string
+    {
+        return app(MarkdownRenderer::class)->toHtml($this->info);
+    }
+
+    /**
+     * The details as one line of plain text, for previews on cards.
+     */
+    public function infoExcerpt(): string
+    {
+        return app(MarkdownRenderer::class)->toPlainText($this->info);
     }
 
     public function isCompleted(): bool

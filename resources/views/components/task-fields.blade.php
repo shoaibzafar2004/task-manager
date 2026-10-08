@@ -16,7 +16,8 @@
 
     <div>
         <label for="info" class="{{ $label }}">Details <span class="{{ $hint }}">(optional)</span></label>
-        <textarea id="info" name="info" rows="3" placeholder="Add more info…" class="{{ $input }}">{{ old('info', $task?->info) }}</textarea>
+        <x-markdown-editor name="info" :value="old('info', $task?->info)" :maxlength="\App\Http\Requests\StoreTaskRequest::INFO_MAX_LENGTH"
+                           placeholder="Add more details: notes, steps, links…" />
         @error('info') <p class="{{ $error }}">{{ $message }}</p> @enderror
     </div>
 

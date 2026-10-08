@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\LabelController;
+use App\Http\Controllers\MarkdownPreviewController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -25,3 +26,5 @@ Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->nam
 
 Route::post('/labels', [LabelController::class, 'store'])->name('labels.store');
 Route::delete('/labels/{label}', [LabelController::class, 'destroy'])->name('labels.destroy');
+
+Route::post('/markdown/preview', MarkdownPreviewController::class)->name('markdown.preview');
