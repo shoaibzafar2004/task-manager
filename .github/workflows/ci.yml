@@ -1,19 +1,68 @@
-name: Tests
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: PHP code style (Pint)
+        run: vendor/bin/pint --test
+
+      - name: JavaScript (ESLint)
+        run: npm run lint
+
+  format:
+    name: Prettier
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
   tests:
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -49,9 +98,10 @@ jobs:
       - name: Run tests
         run: php artisan test
 
-  # Merges Dependabot's patch and minor updates once the tests above have passed.
+  # Merges Dependabot's patch and minor updates once every check above has passed.
   automerge:
-    needs: tests
+    name: Auto-merge Dependabot
+    needs: [lint, format, tests]
     if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:

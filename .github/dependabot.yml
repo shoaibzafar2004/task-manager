@@ -1,6 +1,6 @@
 # Dependabot opens one pull request per package, and at most one open PR per ecosystem at a
 # time. Patch and minor updates are merged automatically once the tests pass (see
-# workflows/tests.yml); major updates wait for a manual review.
+# workflows/ci.yml); major updates wait for a manual review.
 version: 2
 
 updates:
