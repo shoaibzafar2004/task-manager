@@ -7,7 +7,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
@@ -55,7 +56,9 @@ html.dark {
     font-variant-numeric: tabular-nums;
     background-color: var(--color-slate-100);
     color: var(--color-slate-500);
-    transition: background-color 200ms, color 200ms;
+    transition:
+        background-color 200ms,
+        color 200ms;
 }
 .prio-badge[data-priority='1'] {
     background-color: var(--color-rose-100);
@@ -92,7 +95,9 @@ html.dark {
     background-repeat: no-repeat;
     background-position: 0 55%;
     background-size: 0 1.5px;
-    transition: background-size 300ms ease-out, color 300ms;
+    transition:
+        background-size 300ms ease-out,
+        color 300ms;
 }
 .task-card.is-done .task-title {
     background-size: 100% 1.5px;
@@ -147,7 +152,10 @@ html.dark {
     font-size: 0.8125rem;
     font-weight: 500;
     color: var(--color-slate-600);
-    transition: background-color 150ms, border-color 150ms, color 150ms;
+    transition:
+        background-color 150ms,
+        border-color 150ms,
+        color 150ms;
 }
 .label-toggle:hover {
     border-color: var(--label);

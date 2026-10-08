@@ -85,7 +85,9 @@ async function removeCompletedCard(card) {
 
 function decrementTaskCount() {
     let total = 0;
-    document.querySelectorAll('[data-task-count]').forEach((el) => (total = el.textContent = Number(el.textContent) - 1));
+    document
+        .querySelectorAll('[data-task-count]')
+        .forEach((el) => (total = el.textContent = Number(el.textContent) - 1));
     document.getElementById('empty-state')?.classList.toggle('hidden', total > 0);
 }
 
@@ -130,7 +132,9 @@ function initLoadMore() {
             });
         };
 
-        const observer = new IntersectionObserver((entries) => entries[0].isIntersecting && load(), { rootMargin: '300px' });
+        const observer = new IntersectionObserver((entries) => entries[0].isIntersecting && load(), {
+            rootMargin: '300px',
+        });
         observer.observe(marker);
         button.addEventListener('click', load);
     });
@@ -468,9 +472,11 @@ Alpine.data('taskModal', () => ({
     },
 
     trapFocus(event) {
-        const focusable = [...this.$refs.panel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(
-            (element) => element.offsetParent !== null,
-        );
+        const focusable = [
+            ...this.$refs.panel.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            ),
+        ].filter((element) => element.offsetParent !== null);
         const first = focusable[0];
         const last = focusable.at(-1);
 
