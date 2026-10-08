@@ -3,7 +3,10 @@
 A small task manager built with Laravel 13 (PHP 8.3+), MySQL 8.4, Blade, Alpine.js, Tailwind CSS 4 and SortableJS.
 
 ## Features
-- Create, edit and delete tasks. Each task has a title, info, priority, timestamps and an optional project.
+- Create, edit and delete tasks. Each task has a title, info, priority, timestamps, an optional project and an optional due date.
+- Due-date badges show when a task is overdue, due today or due soon.
+- Search tasks by title or details, on both the Tasks and History pages.
+- Dark mode toggle. It follows your system setting until you choose, then remembers your choice.
 - Drag and drop to reorder tasks. Priorities (1 = highest) are saved automatically.
 - Tasks are always sorted by priority.
 - Tick a task to complete it. It animates out of the list.

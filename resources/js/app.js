@@ -130,6 +130,19 @@ Alpine.data('toasts', (initial) => ({
     },
 }));
 
+Alpine.data('themeToggle', () => ({
+    dark: document.documentElement.classList.contains('dark'),
+    toggle() {
+        this.dark = !this.dark;
+        document.documentElement.classList.toggle('dark', this.dark);
+        try {
+            localStorage.setItem('theme', this.dark ? 'dark' : 'light');
+        } catch {
+            // Storage can be unavailable (private mode); the toggle still works for this page.
+        }
+    },
+}));
+
 Alpine.plugin(collapse);
 window.Alpine = Alpine;
 Alpine.start();

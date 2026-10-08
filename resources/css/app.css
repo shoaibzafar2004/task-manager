@@ -3,6 +3,9 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/* Dark mode follows the .dark class on <html> (set from localStorage or the OS preference) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
@@ -10,6 +13,10 @@
 
 [x-cloak] {
     display: none !important;
+}
+
+html.dark {
+    color-scheme: dark;
 }
 
 /* Custom round checkbox */
@@ -27,6 +34,9 @@
     transition: transform 150ms ease-out;
     background-color: white;
     clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+.dark .task-check {
+    background-color: var(--color-slate-900);
 }
 .task-check:checked {
     background-color: var(--color-emerald-500);
@@ -59,6 +69,22 @@
     background-color: var(--color-sky-100);
     color: var(--color-sky-700);
 }
+.dark .prio-badge {
+    background-color: var(--color-slate-800);
+    color: var(--color-slate-400);
+}
+.dark .prio-badge[data-priority='1'] {
+    background-color: color-mix(in oklab, var(--color-rose-500) 18%, transparent);
+    color: var(--color-rose-300);
+}
+.dark .prio-badge[data-priority='2'] {
+    background-color: color-mix(in oklab, var(--color-amber-500) 18%, transparent);
+    color: var(--color-amber-300);
+}
+.dark .prio-badge[data-priority='3'] {
+    background-color: color-mix(in oklab, var(--color-sky-500) 18%, transparent);
+    color: var(--color-sky-300);
+}
 
 /* Completion: strike through, then slide right and collapse */
 .task-card .task-title {
@@ -71,6 +97,9 @@
 .task-card.is-done .task-title {
     background-size: 100% 1.5px;
     color: var(--color-slate-400);
+}
+.dark .task-card.is-done .task-title {
+    color: var(--color-slate-500);
 }
 .is-leaving {
     overflow: hidden;
@@ -96,6 +125,10 @@
     border-style: dashed;
     border-color: var(--color-indigo-300);
     background-color: var(--color-indigo-50);
+}
+.dark .sortable-ghost {
+    border-color: var(--color-indigo-500);
+    background-color: color-mix(in oklab, var(--color-indigo-500) 10%, transparent);
 }
 .sortable-chosen {
     box-shadow: 0 10px 25px -5px rgb(15 23 42 / 0.15);

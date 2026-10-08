@@ -35,6 +35,41 @@ class TaskTest extends TestCase
             ->assertDontSee('Elsewhere');
     }
 
+    public function test_index_searches_title_and_info(): void
+    {
+        Task::factory()->create(['title' => 'Buy milk', 'info' => null]);
+        Task::factory()->create(['title' => 'Call bank', 'info' => 'Ask about the milk card', 'priority' => 2]);
+        Task::factory()->create(['title' => 'Walk dog', 'info' => null, 'priority' => 3]);
+
+        $this->get(route('tasks.index', ['q' => 'milk']))
+            ->assertOk()
+            ->assertSee('Buy milk')
+            ->assertSee('Call bank')
+            ->assertDontSee('Walk dog');
+    }
+
+    public function test_search_treats_wildcards_literally(): void
+    {
+        Task::factory()->create(['title' => '100% done']);
+        Task::factory()->create(['title' => 'Unrelated', 'priority' => 2]);
+
+        $this->get(route('tasks.index', ['q' => '%']))
+            ->assertOk()
+            ->assertSee('100% done')
+            ->assertDontSee('Unrelated');
+    }
+
+    public function test_history_can_be_searched(): void
+    {
+        Task::factory()->completed()->create(['title' => 'Paid invoice']);
+        Task::factory()->completed()->create(['title' => 'Fixed bug']);
+
+        $this->get(route('history', ['q' => 'invoice']))
+            ->assertOk()
+            ->assertSee('Paid invoice')
+            ->assertDontSee('Fixed bug');
+    }
+
     public function test_task_can_be_created(): void
     {
         $project = Project::factory()->create();

@@ -20,18 +20,20 @@ class TaskController extends Controller
     public function index(Request $request): View
     {
         $projectId = $request->integer('project') ?: null;
+        $search = trim($request->string('q')) ?: null;
 
         return view('tasks.index', [
-            'tasks' => Task::with('project')->active()->forProject($projectId)->orderBy('priority')->get(),
+            'tasks' => Task::with('project')->active()->forProject($projectId)->search($search)->orderBy('priority')->get(),
             'projects' => Project::withCount(['tasks' => fn ($q) => $q->active()])->orderBy('name')->get(),
             'projectId' => $projectId,
+            'search' => $search,
         ]);
     }
 
     public function store(StoreTaskRequest $request): RedirectResponse
     {
         $this->priorities->create(
-            $request->safe()->only(['title', 'info', 'project_id']),
+            $request->safe()->only(['title', 'info', 'due_date', 'project_id']),
             $request->validated('priority'),
         );
 
@@ -49,7 +51,7 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, Task $task): RedirectResponse
     {
-        $task->update($request->safe()->only(['title', 'info', 'project_id']));
+        $task->update($request->safe()->only(['title', 'info', 'due_date', 'project_id']));
 
         if ($request->filled('priority')) {
             $this->priorities->move($task, $request->integer('priority'));

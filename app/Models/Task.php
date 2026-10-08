@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['project_id', 'title', 'info', 'priority', 'completed_at'])]
+#[Fillable(['project_id', 'title', 'info', 'due_date', 'priority', 'completed_at'])]
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
@@ -26,6 +26,7 @@ class Task extends Model
     {
         return [
             'priority' => 'integer',
+            'due_date' => 'date',
             'completed_at' => 'datetime',
         ];
     }
@@ -40,6 +41,27 @@ class Task extends Model
         return $this->completed_at !== null;
     }
 
+    /**
+     * How urgent the due date is, or null when the task has no due date.
+     *
+     * @return 'overdue'|'today'|'soon'|'later'|null
+     */
+    public function dueStatus(): ?string
+    {
+        if ($this->due_date === null) {
+            return null;
+        }
+
+        $daysLeft = (int) today()->diffInDays($this->due_date, false);
+
+        return match (true) {
+            $daysLeft < 0 => 'overdue',
+            $daysLeft === 0 => 'today',
+            $daysLeft <= 2 => 'soon',
+            default => 'later',
+        };
+    }
+
     #[Scope]
     protected function active(Builder $query): void
     {
@@ -50,6 +72,18 @@ class Task extends Model
     protected function completed(Builder $query): void
     {
         $query->whereNotNull('completed_at');
+    }
+
+    #[Scope]
+    protected function search(Builder $query, ?string $term): void
+    {
+        $query->when($term, function (Builder $q) use ($term) {
+            $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term).'%';
+
+            $q->where(fn (Builder $q) => $q
+                ->whereRaw("title LIKE ? ESCAPE '!'", [$pattern])
+                ->orWhereRaw("info LIKE ? ESCAPE '!'", [$pattern]));
+        });
     }
 
     #[Scope]

@@ -19,20 +19,25 @@ class DatabaseSeeder extends Seeder
         $personal = Project::create(['name' => 'Personal', 'color' => '#f59e0b']);
 
         $tasks = [
-            [$website, 'Finalize homepage wireframes', 'Share with the team for feedback before Friday.'],
-            [$mobile, 'Fix login crash on Android 15', 'Reproducible on Pixel devices after token refresh.'],
-            [$personal, 'Book dentist appointment', null],
-            [$website, 'Set up staging environment', 'Mirror production config, seed with anonymised data.'],
-            [$mobile, 'Implement push notifications', "Use FCM for Android and APNs for iOS.\nAdd opt-in screen."],
-            [$website, 'Write copy for the About page', null],
-            [$personal, 'Renew gym membership', null],
-            [$mobile, 'Add dark mode', 'Follow the system setting by default.'],
-            [$website, 'Optimise hero images', 'Convert to AVIF/WebP and lazy-load below the fold.'],
-            [$personal, 'Plan weekend trip', 'Check train times and book a place to stay.'],
+            [$website, 'Finalize homepage wireframes', 'Share with the team for feedback before Friday.', 2],
+            [$mobile, 'Fix login crash on Android 15', 'Reproducible on Pixel devices after token refresh.', -1],
+            [$personal, 'Book dentist appointment', null, 0],
+            [$website, 'Set up staging environment', 'Mirror production config, seed with anonymised data.', 7],
+            [$mobile, 'Implement push notifications', "Use FCM for Android and APNs for iOS.\nAdd opt-in screen.", 14],
+            [$website, 'Write copy for the About page', null, null],
+            [$personal, 'Renew gym membership', null, 1],
+            [$mobile, 'Add dark mode', 'Follow the system setting by default.', null],
+            [$website, 'Optimise hero images', 'Convert to AVIF/WebP and lazy-load below the fold.', null],
+            [$personal, 'Plan weekend trip', 'Check train times and book a place to stay.', 5],
         ];
 
-        foreach ($tasks as [$project, $title, $info]) {
-            $priorities->create(['project_id' => $project->id, 'title' => $title, 'info' => $info]);
+        foreach ($tasks as [$project, $title, $info, $dueInDays]) {
+            $priorities->create([
+                'project_id' => $project->id,
+                'title' => $title,
+                'info' => $info,
+                'due_date' => $dueInDays === null ? null : today()->addDays($dueInDays),
+            ]);
         }
 
         Task::factory()->completed()->create(['project_id' => $website->id, 'title' => 'Pick a colour palette']);
