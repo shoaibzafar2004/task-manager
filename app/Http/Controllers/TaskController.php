@@ -82,6 +82,14 @@ class TaskController extends Controller
         return back()->with('status', 'Task created.');
     }
 
+    /**
+     * Show one task in full. Deleted tasks can be viewed too, so History entries open.
+     */
+    public function show(Task $task): View
+    {
+        return view('tasks.show', ['task' => $task->load(['project', 'labels'])]);
+    }
+
     public function edit(Task $task): View
     {
         return view('tasks.edit', [
@@ -101,7 +109,13 @@ class TaskController extends Controller
             $this->priorities->move($task, $request->integer('priority'));
         }
 
-        return redirect()->route($task->isCompleted() ? 'history' : 'tasks.index')->with('status', 'Task updated.');
+        $redirect = match (true) {
+            $request->input('from') === 'show' => redirect()->route('tasks.show', $task),
+            $task->isCompleted() => redirect()->route('history'),
+            default => redirect()->route('tasks.index'),
+        };
+
+        return $redirect->with('status', 'Task updated.');
     }
 
     public function destroy(Task $task): RedirectResponse
@@ -111,11 +125,18 @@ class TaskController extends Controller
         return back()->with('status', 'Task deleted.');
     }
 
-    public function toggle(Task $task): JsonResponse
+    /**
+     * Complete or reopen a task. The list uses JSON; the task page submits a plain form.
+     */
+    public function toggle(Request $request, Task $task): JsonResponse|RedirectResponse
     {
         $task->isCompleted() ? $this->priorities->uncomplete($task) : $this->priorities->complete($task);
 
-        return response()->json(['completed' => $task->isCompleted(), 'priority' => $task->priority]);
+        if ($request->wantsJson()) {
+            return response()->json(['completed' => $task->isCompleted(), 'priority' => $task->priority]);
+        }
+
+        return back()->with('status', $task->isCompleted() ? 'Task completed.' : 'Task reopened.');
     }
 
     public function reorder(ReorderTasksRequest $request): JsonResponse

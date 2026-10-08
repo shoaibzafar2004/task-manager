@@ -11,7 +11,9 @@
         @endif
 
         <div class="min-w-0 flex-1">
-            <h2 @class(['font-medium wrap-break-word text-slate-500 dark:text-slate-400', 'line-through decoration-slate-300 dark:decoration-slate-600' => $tab === 'completed'])>{{ $task->title }}</h2>
+            <h2 @class(['font-medium wrap-break-word text-slate-500 dark:text-slate-400', 'line-through decoration-slate-300 dark:decoration-slate-600' => $tab === 'completed'])>
+                <a href="{{ route('tasks.show', $task->id) }}" class="transition hover:text-indigo-600 dark:hover:text-indigo-400">{{ $task->title }}</a>
+            </h2>
             @if ($task->info)
                 <p class="mt-1 line-clamp-2 text-sm whitespace-pre-line text-slate-400 dark:text-slate-500">{{ $task->info }}</p>
             @endif

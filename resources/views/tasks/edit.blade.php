@@ -7,6 +7,10 @@
 
     <form method="POST" action="{{ route('tasks.update', $task) }}" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         @csrf @method('PUT')
+        {{-- Return to the task page after saving when that's where the edit started --}}
+        @if (old('from', url()->previous() === route('tasks.show', $task) ? 'show' : null) === 'show')
+            <input type="hidden" name="from" value="show">
+        @endif
 
         <div class="mb-5 flex items-start justify-between gap-4">
             <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Edit task</h1>

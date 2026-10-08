@@ -12,6 +12,7 @@ Route::get('/history', HistoryController::class)->name('history');
 Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->group(function () {
     Route::post('/', 'store')->name('store');
     Route::post('/reorder', 'reorder')->name('reorder');
+    Route::get('/{task}', 'show')->name('show')->withTrashed();
     Route::get('/{task}/edit', 'edit')->name('edit');
     Route::put('/{task}', 'update')->name('update');
     Route::delete('/{task}', 'destroy')->name('destroy');
