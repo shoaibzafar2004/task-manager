@@ -1,0 +1,31 @@
+# Version control, CI and editor files
+.git
+.github
+.claude
+.idea
+.vscode
+
+# Installed inside the image instead
+node_modules
+vendor
+
+# Built inside the image; "hot" would point the app at a Vite dev server
+public/build
+public/hot
+
+# Runtime files from local development
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*.php
+.phpunit.result.cache
+
+# Secrets come from docker-compose (env_file), never baked into the image
+.env
+.env.*
+!.env.example
+
+# Not needed to run the app
+backups
+tests
