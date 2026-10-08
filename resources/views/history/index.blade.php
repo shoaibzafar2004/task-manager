@@ -1,7 +1,21 @@
 <x-layouts.app title="History">
-    <div class="mb-4">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">History</h1>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Completed and deleted tasks.</p>
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">History</h1>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Completed and deleted tasks.</p>
+        </div>
+
+        {{-- Downloads everything (open, completed and deleted tasks, projects and labels) --}}
+        <div class="flex items-center gap-1 text-sm" role="group" aria-label="Export all data">
+            <span class="mr-1 text-slate-500 dark:text-slate-400">Export all:</span>
+            @foreach (['json' => 'JSON', 'csv' => 'CSV'] as $format => $name)
+                <a href="{{ route('export.'.$format) }}" download
+                   class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    {{ $name }}
+                </a>
+            @endforeach
+        </div>
     </div>
 
     <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
