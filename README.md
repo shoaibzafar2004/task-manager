@@ -34,6 +34,11 @@ composer run dev              # app at http://127.0.0.1:8000, with Vite hot relo
 php artisan test   # uses in-memory SQLite (see phpunit.xml)
 ```
 
+## Continuous integration and dependency updates
+- GitHub Actions runs the tests and the asset build on every push and pull request (`.github/workflows/tests.yml`).
+- Dependabot opens one pull request per package for Composer, npm and GitHub Actions, with at most one open per ecosystem at a time (`.github/dependabot.yml`).
+- Patch and minor updates are merged automatically once the tests pass. Major updates are left for a manual review.
+
 ## How priority works
 Open tasks always hold a gapless sequence `1..n`. The logic lives in `app/Services/TaskPriorityService.php`:
 - **New task:** goes to the bottom, or to the position you enter, in which case the tasks below it shift down.

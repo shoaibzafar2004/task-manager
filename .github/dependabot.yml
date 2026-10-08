@@ -1,0 +1,33 @@
+# Dependabot opens one pull request per package, and at most one open PR per ecosystem at a
+# time. Patch and minor updates are merged automatically once the tests pass (see
+# workflows/tests.yml); major updates wait for a manual review.
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 1
+    labels: [dependencies, php]
+    commit-message:
+      prefix: "deps(php)"
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 1
+    labels: [dependencies, javascript]
+    commit-message:
+      prefix: "deps(js)"
+
+  # Keeps the actions used by the workflows up to date too.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    labels: [dependencies, github-actions]
+    commit-message:
+      prefix: "deps(actions)"
