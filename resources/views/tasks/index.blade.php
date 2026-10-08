@@ -36,12 +36,15 @@
             </div>
         </div>
 
+        <x-view-tabs :view="$view" :counts="[...$viewCounts, 'all' => $viewCounts['all'] ?? $total]"
+                     :params="['project' => $projectId, 'label' => $labelId, 'q' => $search]" />
+
         {{-- Toolbar --}}
         <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <x-search-box route="tasks.index" :search="$search" :params="['project' => $projectId, 'label' => $labelId]" />
+            <x-search-box route="tasks.index" :search="$search" :params="['view' => $view, 'project' => $projectId, 'label' => $labelId]" />
             <div class="grid grid-cols-2 gap-2">
-                <x-filter-select :options="$projects" :selected="$projectId" param="project" all-text="All projects" route="tasks.index" :params="['label' => $labelId, 'q' => $search]" />
-                <x-filter-select :options="$labels" :selected="$labelId" param="label" all-text="All labels" route="tasks.index" :params="['project' => $projectId, 'q' => $search]" />
+                <x-filter-select :options="$projects" :selected="$projectId" param="project" all-text="All projects" route="tasks.index" :params="['view' => $view, 'label' => $labelId, 'q' => $search]" />
+                <x-filter-select :options="$labels" :selected="$labelId" param="label" all-text="All labels" route="tasks.index" :params="['view' => $view, 'project' => $projectId, 'q' => $search]" />
             </div>
         </div>
 
@@ -49,7 +52,8 @@
         <div x-show="showForm" x-collapse x-cloak x-ref="newTask">
             <form method="POST" action="{{ route('tasks.store') }}" class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 @csrf
-                <x-task-fields :projects="$projects" :labels="$labels" :project-id="$projectId" :label-id="$labelId" />
+                <x-task-fields :projects="$projects" :labels="$labels" :project-id="$projectId" :label-id="$labelId"
+                               :due-date="$view === 'today' ? today()->toDateString() : null" />
                 <div class="mt-5 flex justify-end gap-2">
                     <button type="button" @click="showForm = false" class="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancel</button>
                     <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500">Add task</button>
@@ -74,7 +78,11 @@
                     <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                 </div>
                 <p class="font-medium text-slate-700 dark:text-slate-200">All clear!</p>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">No open tasks here. Add one or check the <a href="{{ route('history', ['project' => $projectId]) }}" class="text-indigo-600 hover:underline dark:text-indigo-400">history</a>.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">@switch($view)
+                    @case('today') Nothing is due today or overdue. @break
+                    @case('upcoming') Nothing is due in the next 7 days. @break
+                    @default No open tasks here.
+                @endswitch Add one or check the <a href="{{ route('history', ['project' => $projectId]) }}" class="text-indigo-600 hover:underline dark:text-indigo-400">history</a>.</p>
             @endif
         </div>
 
