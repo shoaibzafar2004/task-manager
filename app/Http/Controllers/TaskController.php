@@ -17,13 +17,49 @@ class TaskController extends Controller
 {
     public function __construct(private TaskPriorityService $priorities) {}
 
-    public function index(Request $request): View
+    /**
+     * How many open tasks are loaded per batch.
+     */
+    public const PER_PAGE = 100;
+
+    /**
+     * Show open tasks in priority order, one batch at a time.
+     *
+     * Batches are keyed on priority (`?after=N`) rather than page numbers, so completing or
+     * reordering tasks between batches never skips or repeats a task. JSON requests get
+     * the next batch's rendered cards for the "load more" script.
+     */
+    public function index(Request $request): View|JsonResponse
     {
         $projectId = $request->integer('project') ?: null;
         $search = trim($request->string('q')) ?: null;
 
+        $query = Task::active()->forProject($projectId)->search($search);
+
+        $tasks = $query->clone()
+            ->with('project')
+            ->where('priority', '>', $request->integer('after'))
+            ->orderBy('priority')
+            ->limit(self::PER_PAGE + 1)
+            ->get();
+
+        $hasMore = $tasks->count() > self::PER_PAGE;
+        $tasks = $tasks->take(self::PER_PAGE);
+
+        // The client appends `after` from its last visible card, which stays correct as tasks are completed.
+        $nextUrl = $hasMore ? route('tasks.index', ['project' => $projectId, 'q' => $search]) : null;
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'html' => view('tasks.partials.cards', ['tasks' => $tasks])->render(),
+                'next_url' => $nextUrl,
+            ]);
+        }
+
         return view('tasks.index', [
-            'tasks' => Task::with('project')->active()->forProject($projectId)->search($search)->orderBy('priority')->get(),
+            'tasks' => $tasks,
+            'nextUrl' => $nextUrl,
+            'total' => $query->count(),
             'projects' => Project::withCount(['tasks' => fn ($q) => $q->active()])->orderBy('name')->get(),
             'projectId' => $projectId,
             'search' => $search,

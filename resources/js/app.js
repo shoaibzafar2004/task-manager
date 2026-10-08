@@ -40,10 +40,67 @@ function animateOut(card) {
     }).then(() => card.remove());
 }
 
-function refreshCount(list) {
-    const count = list.querySelectorAll('.task-card').length;
-    document.querySelectorAll('[data-task-count]').forEach((el) => (el.textContent = count));
-    document.getElementById('empty-state')?.classList.toggle('hidden', count > 0);
+/**
+ * Completing a task and loading the next batch both depend on the current priorities,
+ * so they run one at a time to keep the `after` cursor accurate.
+ */
+let pending = Promise.resolve();
+function serially(job) {
+    pending = pending.then(job, job);
+    return pending;
+}
+
+function decrementTaskCount() {
+    let total = 0;
+    document.querySelectorAll('[data-task-count]').forEach((el) => (total = el.textContent = Number(el.textContent) - 1));
+    document.getElementById('empty-state')?.classList.toggle('hidden', total > 0);
+}
+
+/** "Load more" for both lists: fetches the next batch when the marker scrolls into view. */
+function initLoadMore() {
+    document.querySelectorAll('[data-load-more]').forEach((marker) => {
+        const list = document.getElementById(marker.dataset.list);
+        const button = marker.querySelector('button');
+        const spinner = marker.querySelector('.load-more-spinner');
+        let loading = false;
+
+        const nextUrl = () => {
+            const url = new URL(marker.dataset.nextUrl, window.location.href);
+            // Active tasks are keyed on the last loaded priority, read at request time.
+            if (list.id === 'task-list') {
+                const last = [...list.querySelectorAll('.task-card:not([data-completed])')].at(-1);
+                url.searchParams.set('after', last ? last.dataset.priority : 0);
+            }
+            return url;
+        };
+
+        const load = () => {
+            if (loading || !marker.dataset.nextUrl) return;
+            loading = button.disabled = true;
+            spinner.classList.remove('hidden');
+
+            serially(async () => {
+                try {
+                    const { html, next_url } = await request('GET', nextUrl());
+                    list.insertAdjacentHTML('beforeend', html);
+                    marker.dataset.nextUrl = next_url ?? '';
+                    marker.classList.toggle('hidden', !next_url);
+                } catch {
+                    toast('Could not load more tasks.', 'error');
+                } finally {
+                    loading = button.disabled = false;
+                    spinner.classList.add('hidden');
+                    // Re-observe so a marker that is still on screen triggers the next batch.
+                    observer.unobserve(marker);
+                    observer.observe(marker);
+                }
+            });
+        };
+
+        const observer = new IntersectionObserver((entries) => entries[0].isIntersecting && load(), { rootMargin: '300px' });
+        observer.observe(marker);
+        button.addEventListener('click', load);
+    });
 }
 
 function initTaskList() {
@@ -74,16 +131,30 @@ function initTaskList() {
         if (!checkbox) return;
 
         const card = checkbox.closest('.task-card');
-        const removed = Number(card.dataset.priority);
         checkbox.disabled = true;
         card.classList.add('is-done');
 
-        try {
-            await request('PATCH', checkbox.dataset.toggleUrl);
-        } catch {
+        const completed = await serially(async () => {
+            try {
+                await request('PATCH', checkbox.dataset.toggleUrl);
+            } catch {
+                card.classList.remove('is-done');
+                return false;
+            }
+
+            // Mirror the server closing the gap right away, so the next batch starts at the right place.
+            card.dataset.completed = '';
+            const removed = Number(card.dataset.priority);
+            list.querySelectorAll('.task-card').forEach((other) => {
+                const p = Number(other.dataset.priority);
+                if (other !== card && p > removed) setPriority(other, p - 1);
+            });
+            return true;
+        });
+
+        if (!completed) {
             checkbox.checked = false;
             checkbox.disabled = false;
-            card.classList.remove('is-done');
             toast('Could not complete the task.', 'error');
             return;
         }
@@ -91,29 +162,25 @@ function initTaskList() {
         // Let the strike-through register before the card slides away.
         await new Promise((r) => setTimeout(r, 350));
         await animateOut(card);
-
-        list.querySelectorAll('.task-card').forEach((other) => {
-            const p = Number(other.dataset.priority);
-            if (p > removed) setPriority(other, p - 1);
-        });
-        refreshCount(list);
+        decrementTaskCount();
         toast('Task completed 🎉');
     });
 }
 
 function initHistory() {
-    document.querySelectorAll('.reopen-btn').forEach((button) => {
-        button.addEventListener('click', async () => {
-            button.disabled = true;
-            try {
-                await request('PATCH', button.dataset.reopenUrl);
-                await animateOut(button.closest('li'));
-                toast('Task reopened and moved back to the list.');
-            } catch {
-                button.disabled = false;
-                toast('Could not reopen the task.', 'error');
-            }
-        });
+    document.getElementById('history-list')?.addEventListener('click', async (event) => {
+        const button = event.target.closest('.reopen-btn');
+        if (!button) return;
+
+        button.disabled = true;
+        try {
+            await request('PATCH', button.dataset.reopenUrl);
+            await animateOut(button.closest('li'));
+            toast('Task reopened and moved back to the list.');
+        } catch {
+            button.disabled = false;
+            toast('Could not reopen the task.', 'error');
+        }
     });
 }
 
@@ -149,3 +216,4 @@ Alpine.start();
 
 initTaskList();
 initHistory();
+initLoadMore();

@@ -8,7 +8,7 @@ A small task manager built with Laravel 13 (PHP 8.3+), MySQL 8.4, Blade, Alpine.
 - Search tasks by title or details, on both the Tasks and History pages.
 - Dark mode toggle. It follows your system setting until you choose, then remembers your choice.
 - Drag and drop to reorder tasks. Priorities (1 = highest) are saved automatically.
-- Tasks are always sorted by priority.
+- Tasks are always sorted by priority. Long lists load 100 at a time as you scroll (History loads 20 at a time).
 - Tick a task to complete it. It animates out of the list.
 - **History** page with tabs for Completed tasks (reopen or delete) and Deleted tasks (restore).
 - Project dropdown to show all tasks or one project's tasks. You can add and delete projects.
