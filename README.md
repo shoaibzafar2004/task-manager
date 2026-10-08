@@ -9,6 +9,7 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 - Create, edit and delete tasks. Each task has a title, details, priority, an optional project, labels and an optional due date, plus created, updated and completed times.
 - Tasks are always **sorted by priority** (1 = highest). **Drag and drop** to reorder them, and the priorities are saved automatically.
 - Tick a task's checkbox to **complete** it. The title is struck through and the card slides out of the list.
+- **Today** and **Upcoming** tabs: tasks overdue or due today, and tasks due in the next 7 days. The Today count turns red when something is overdue. The tabs keep the priority order and drag and drop, and combine with the project, label and search filters.
 - **Due-date badges** show when a task is overdue (red), due today (amber), due within 2 days (blue) or due later.
 - Deleting asks for confirmation in a themed dialog. Deleted tasks can be restored.
 

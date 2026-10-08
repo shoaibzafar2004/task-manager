@@ -128,6 +128,19 @@ class Task extends Model
         });
     }
 
+    /**
+     * Narrow to a due-date view: "today" (overdue or due today) or "upcoming" (the next 7 days).
+     */
+    #[Scope]
+    protected function dueIn(Builder $query, ?string $view): void
+    {
+        match ($view) {
+            'today' => $query->whereDate('due_date', '<=', today()),
+            'upcoming' => $query->whereDate('due_date', '>', today())->whereDate('due_date', '<=', today()->addDays(7)),
+            default => null,
+        };
+    }
+
     #[Scope]
     protected function withLabel(Builder $query, ?int $labelId): void
     {
