@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\MarkdownPreviewController;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [TaskController::class, 'index'])->name('tasks.index');
 Route::get('/history', HistoryController::class)->name('history');
+Route::get('/export.json', [ExportController::class, 'json'])->name('export.json');
+Route::get('/export.csv', [ExportController::class, 'csv'])->name('export.csv');
 
 Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->group(function () {
     Route::post('/', 'store')->name('store');

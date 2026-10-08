@@ -30,6 +30,7 @@ A task manager built with **Laravel 13** (PHP 8.3+), **MySQL 8.4**, Blade, **Alp
 
 ### History and interface
 
+- **Export:** on the History page, download everything (open, completed and deleted tasks, projects and labels) as **JSON** or **CSV**. The CSV opens safely in spreadsheet apps.
 - The **History** page has a _Completed_ tab (reopen or delete) and a _Deleted_ tab (restore).
 - **Long lists load in batches as you scroll:** 100 open tasks at a time, and 20 History entries at a time.
 - **Dark mode:** it follows your system setting until you use the toggle in the header, then remembers your choice.
