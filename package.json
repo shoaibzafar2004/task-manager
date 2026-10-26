@@ -26,7 +26,7 @@
         "@laravel/multiplex": "^0.4.1"
     },
     "dependencies": {
-        "@alpinejs/collapse": "^3.17.4",
+        "@alpinejs/collapse": "^3.17.5",
         "alpinejs": "^3.17.4",
         "sortablejs": "^1.15.7"
     }
